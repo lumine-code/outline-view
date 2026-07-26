@@ -38,9 +38,9 @@
     "prettier": "^3.9.6"
   },
   "consumedServices": {
-    "outline-view": {
+    "outline.provider": {
       "versions": {
-        "^1.0.0": "consumeOutlineProvider"
+        "^1.0.0": "consumeOutline"
       }
     },
     "symbol.provider": {

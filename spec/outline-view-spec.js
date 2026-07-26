@@ -113,7 +113,7 @@ describe("outline-view", () => {
 
   describe("with an outline-view provider", () => {
     beforeEach(async () => {
-      providerDisposable = mainModule.consumeOutlineProvider(makeOutlineProvider());
+      providerDisposable = mainModule.consumeOutline(makeOutlineProvider());
       await openEditorAndView();
     });
 

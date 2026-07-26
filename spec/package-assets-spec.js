@@ -62,7 +62,7 @@ describe("outline-view package assets", () => {
 
   it("consumes the outline-view and symbol.provider services", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.consumedServices["outline-view"].versions["^1.0.0"]).toBe("consumeOutlineProvider");
+    expect(pkg.consumedServices["outline.provider"].versions["^1.0.0"]).toBe("consumeOutline");
     expect(pkg.consumedServices["symbol.provider"].versions["^1.0.0"]).toBe("consumeSymbol");
     expect(pkg.providedServices).toBeUndefined();
   });
