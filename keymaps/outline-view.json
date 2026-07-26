@@ -1,0 +1,12 @@
+{
+  "atom-workspace": {
+    "cmdorctrl-alt-o": "outline-view:toggle"
+  },
+  ".outline-view": {
+    "enter": "outline-view:activate-selected-entry",
+    "left": "outline-view:collapse-selected-entry",
+    "escape": "outline-view:unfocus",
+    "home": "core:move-to-top",
+    "end": "core:move-to-bottom"
+  }
+}

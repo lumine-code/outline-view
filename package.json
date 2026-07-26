@@ -1,0 +1,86 @@
+{
+  "name": "outline-view",
+  "author": "lumine-code",
+  "description": "Show a hierarchical symbol outline of the active editor.",
+  "repository": "https://github.com/lumine-code/outline-view",
+  "bugs": {
+    "url": "https://github.com/lumine-code/outline-view/issues"
+  },
+  "keywords": [
+    "symbols",
+    "structure",
+    "navigation",
+    "toc",
+    "tree",
+    "lsp"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.100.0 <2.0.0"
+  },
+  "main": "./lib/main",
+  "scripts": {
+    "test": "cd ../lumine && npm run test:only -- ../outline-view/spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@lumine-code/etch": "https://github.com/lumine-code/etch.git#ace74599f9d6b54e9eb24ecb1e2407e9c35fcc74"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.2.2",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.6"
+  },
+  "consumedServices": {
+    "outline-view": {
+      "versions": {
+        "^1.0.0": "consumeOutlineProvider"
+      }
+    },
+    "symbol.provider": {
+      "description": "Allows external sources to suggest symbols for a given file or project.",
+      "versions": {
+        "^1.0.0": "consumeSymbolProvider"
+      }
+    }
+  },
+  "configSchema": {
+    "visitEntriesOnKeyboardMovement": {
+      "title": "Visit Entries On Keyboard Movement",
+      "description": "Reveal symbols in the editor whenever their entries in the outline are visited with core keyboard commands. If disabled, you must use `Enter` (or its equivalent) to reveal a symbol after it has been focused.",
+      "type": "boolean",
+      "default": false
+    },
+    "showOnRightSide": {
+      "title": "Show On Right Side",
+      "description": "When enabled, the outline appears in the right dock by default instead of the left dock.",
+      "type": "boolean",
+      "default": false
+    },
+    "ignoredSymbolTypes": {
+      "title": "Ignored Symbol Types",
+      "description": "A comma-separated list of symbol types to ignore, keyed on a symbol's `icon` or `kind`. Hover over a symbol in the outline; if a string appears in parentheses in the tooltip, that value can be used to ignore that kind of symbol. All descendants of an ignored symbol are also ignored.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "nameOverflowStrategy": {
+      "title": "Name Overflow Strategy",
+      "description": "What to do when an item's name is too long to fit in the dock. The `scroll` option overflows and adds a horizontal scrollbar; the `ellipsis` option truncates the symbol name with an ellipsis.",
+      "type": "string",
+      "enum": [
+        "scroll",
+        "ellipsis"
+      ],
+      "default": "scroll"
+    }
+  }
+}

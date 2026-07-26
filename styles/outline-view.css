@@ -1,0 +1,79 @@
+.outline-view {
+  font-size: var(--font-size);
+  font-weight: 400;
+  color: var(--text-color);
+  background-color: var(--tree-view-background-color);
+  contain: size;
+  overflow: auto;
+  user-select: none;
+}
+
+.outline-view .icon::before {
+  font-size: var(--font-size);
+}
+
+.outline-view.with-ellipsis-strategy ul.outline-list-root.outline-list {
+  min-width: unset;
+}
+
+.outline-view.with-ellipsis-strategy .name {
+  max-width: calc(100% - var(--font-size));
+}
+
+.outline-view.with-ellipsis-strategy .name-inner {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.outline-view ul.background-message {
+  padding-top: 50px;
+  text-align: center;
+}
+
+.outline-view ul.outline-list-root.outline-list {
+  isolation: isolate;
+  position: relative;
+  min-width: min-content;
+  /* Imitate what's built into tree-view. */
+  padding: 0 10px 0 5px;
+}
+
+.outline-view ul.outline-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.outline-view .outline-list.hidden {
+  display: none;
+}
+
+.outline-view .name {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.outline-view .name::before {
+  flex: none;
+  position: relative;
+  top: -1px;
+  text-align: center;
+  margin-right: 5px;
+}
+
+.outline-view .name-inner {
+  display: block;
+  max-width: 100%;
+}
+
+.outline-view .outline-view-option.list-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.outline-view .outline-view-option.list-item::before {
+  flex: none;
+}

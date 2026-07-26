@@ -1,0 +1,22 @@
+{
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "Outline View",
+          "submenu": [
+            {
+              "label": "Toggle",
+              "command": "outline-view:toggle"
+            },
+            {
+              "label": "Reveal Current Symbol",
+              "command": "outline-view:reveal-in-outline-view"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
