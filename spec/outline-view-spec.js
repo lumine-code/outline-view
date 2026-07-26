@@ -157,7 +157,7 @@ describe("outline-view", () => {
 
   describe("with only a symbol.provider fallback", () => {
     beforeEach(async () => {
-      providerDisposable = mainModule.consumeSymbolProvider(makeSymbolProvider());
+      providerDisposable = mainModule.consumeSymbol(makeSymbolProvider());
       await openEditorAndView();
     });
 
