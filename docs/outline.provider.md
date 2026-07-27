@@ -9,9 +9,9 @@ Supplies the hierarchical outline of a document — the tree of classes, functio
 | Consumed by | `consumeOutline(provider)` returning a `Disposable`           |
 | Owner       | [`outline-view`](https://github.com/lumine-code/outline-view) |
 
-Unlike [`symbol.provider`](https://lumine-code.github.io/docs.html#services/symbol.provider), which returns a flat searchable list, this returns a **tree**. `outline-view` also accepts symbol providers and wraps them, so implement this one only when you have real nesting to express.
+Unlike `symbol.provider`, which returns a flat searchable list, this returns a **tree**. `outline-view` also accepts symbol providers and wraps them, so implement this one only when you have real nesting to express.
 
-A language server reaches this through an [`ide-client`](https://lumine-code.github.io/docs.html#services/ide-client) adapter.
+A language server reaches this through an `ide-client` adapter.
 
 ## Registration
 

@@ -51,7 +51,7 @@ The outline appearance can be tweaked from your `styles.less`:
 ## Services
 
 - **[outline.provider](docs/outline.provider.md)** (`^1.0.0`): consumed to receive document outlines from language servers and other outline providers.
-- **[symbol.provider](https://lumine-code.github.io/docs.html#services/symbol.provider)** (`^1.0.0`): consumed to build a fallback outline from symbol providers when no outline provider matches the editor.
+- **symbol.provider** (`^1.0.0`): consumed to build a fallback outline from symbol providers when no outline provider matches the editor.
 
 ## Contributing
 
