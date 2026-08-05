@@ -23,6 +23,14 @@
     "You can browse the symbols of the current file as a tree with {{ 'outline-view:toggle' | keystroke }}"
   ],
   "main": "./lib/main",
+  "files": [
+    "docs",
+    "keymaps",
+    "lib",
+    "menus",
+    "spec",
+    "styles"
+  ],
   "scripts": {
     "test": "lumine --test spec",
     "lint": "eslint . --max-warnings 0",
