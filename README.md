@@ -37,9 +37,9 @@ Commands available in `.outline-view`:
 
 ## Customization
 
-The outline appearance can be tweaked from your `styles.less`:
+The outline appearance can be tweaked from your `styles.css`:
 
-```less
+```css
 .outline-view {
   font-size: 12px;
   .name-inner {
