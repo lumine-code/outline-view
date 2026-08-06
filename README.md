@@ -10,7 +10,7 @@ The outline lives in a dock and follows the active editor: it lists the document
 - **Navigation**: click an entry, or confirm it with the keyboard, to move the cursor to that symbol.
 - **Cursor tracking**: selects the entry of the symbol under the cursor as it moves through the file.
 - **Live refresh**: rebuilds the outline as the buffer changes, honoring providers that prefer refresh on save.
-- **Provider based**: sources outlines from language servers, with a fallback that assembles symbol providers into an outline.
+- **Provider based**: sources outlines from language servers, with a fallback that assembles the symbol hub’s symbols into an outline.
 - **Filtering**: hides chosen symbol kinds via the ignored-symbol-types setting.
 - **Overflow control**: long names either scroll horizontally or truncate with an ellipsis.
 
@@ -51,7 +51,7 @@ The outline appearance can be tweaked from your `styles.css`:
 ## Services
 
 - **[outline.provider](docs/outline.provider.md)** (`^1.0.0`): consumed to receive document outlines from language servers and other outline providers.
-- **symbol.provider** (`^1.0.0`): consumed to build a fallback outline from symbol providers when no outline provider matches the editor.
+- **symbol.registry** (`^1.0.0`): consumed to build a fallback outline from the symbol hub when no outline provider matches the editor.
 
 ## Contributing
 

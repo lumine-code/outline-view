@@ -1,4 +1,4 @@
-const { Point } = require("atom");
+const { Emitter, Point } = require("atom");
 
 // A stub provider following the `outline-view` service contract (see
 // ide-client's outline provider): `grammarScopes` is a getter, and
@@ -45,18 +45,27 @@ function makeOutlineProvider() {
   };
 }
 
-// A stub provider following the `symbol.provider` service contract, as
-// provided by symbol-provider-tree-sitter and symbol-provider-ctags.
-function makeSymbolProvider() {
+// A stub following the `symbol.registry` service contract, as provided by
+// the symbol hub: symbols arrive pre-sorted, each carrying a `position`.
+function makeSymbolRegistry() {
+  const emitter = new Emitter();
   return {
-    name: "Stub Symbols",
-    packageName: "stub-symbols",
-    isExclusive: true,
-    canProvideSymbols: () => true,
-    getSymbols: () => [
+    symbols: [
       { name: "delta", position: new Point(1, 0), tag: "function" },
       { name: "epsilon", position: new Point(2, 1), tag: "method", context: "delta" },
     ],
+    async getFileSymbols() {
+      return this.symbols;
+    },
+    peekFileSymbols() {
+      return this.symbols;
+    },
+    onDidInvalidateFileSymbols(callback) {
+      return emitter.on("did-invalidate-file-symbols", callback);
+    },
+    invalidate(bundle = { editor: null, provider: null }) {
+      emitter.emit("did-invalidate-file-symbols", bundle);
+    },
   };
 }
 
@@ -155,9 +164,12 @@ describe("outline-view", () => {
     });
   });
 
-  describe("with only a symbol.provider fallback", () => {
+  describe("with only the symbol.registry fallback", () => {
+    let registry;
+
     beforeEach(async () => {
-      providerDisposable = mainModule.consumeSymbol(makeSymbolProvider());
+      registry = makeSymbolRegistry();
+      providerDisposable = mainModule.consumeSymbolRegistry(registry);
       await openEditorAndView();
     });
 
@@ -180,6 +192,37 @@ describe("outline-view", () => {
       );
       epsilonInner.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       expect(editor.getCursorBufferPosition().isEqual([2, 1])).toBe(true);
+    });
+
+    it("refreshes when the registry announces an invalidation", async () => {
+      registry.symbols = [{ name: "zeta", position: new Point(3, 0), tag: "function" }];
+      registry.invalidate({ editor, provider: null });
+      await waitFor(() => names().length === 1);
+      expect(names()).toEqual(["zeta"]);
+    });
+
+    it("ignores invalidations scoped to another editor", async () => {
+      registry.symbols = [{ name: "zeta", position: new Point(3, 0), tag: "function" }];
+      registry.invalidate({ editor: {}, provider: null });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(names()).toEqual(["delta", "epsilon"]);
+    });
+
+    it("keeps the current outline when a run is superseded", async () => {
+      registry.getFileSymbols = async () => null;
+      registry.invalidate({ editor, provider: null });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(names()).toEqual(["delta", "epsilon"]);
+    });
+
+    it("removes the adapter when the service is torn down", () => {
+      expect(mainModule.broker.providers.length).toBe(1);
+      providerDisposable.dispose();
+      providerDisposable = null;
+      expect(mainModule.broker.providers.length).toBe(0);
+      // A stale invalidation from the departed service must be inert.
+      registry.invalidate({ editor, provider: null });
+      expect(names()).toEqual(["delta", "epsilon"]);
     });
   });
 });

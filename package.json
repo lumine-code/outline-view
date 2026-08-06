@@ -54,10 +54,9 @@
         "^1.0.0": "consumeOutline"
       }
     },
-    "symbol.provider": {
-      "description": "Allows external sources to suggest symbols for a given file or project.",
+    "symbol.registry": {
       "versions": {
-        "^1.0.0": "consumeSymbol"
+        "^1.0.0": "consumeSymbolRegistry"
       }
     }
   },
