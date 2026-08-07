@@ -1,6 +1,8 @@
 {
+  // `alt-o` reveals the panel and hands focus back on a second press. Bare
+  // alt-<letter> is the tier for revealing a surface; nothing else claims one.
   "atom-workspace": {
-    "cmdorctrl-alt-o": "outline-view:toggle"
+    "alt-o": "outline-view:toggle-focus"
   },
   ".outline-view": {
     "enter": "outline-view:activate-selected-entry",

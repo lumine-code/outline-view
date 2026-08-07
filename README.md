@@ -23,7 +23,8 @@ To install `outline-view` search for _outline-view_ in the Install pane of the L
 Commands available in `atom-workspace`:
 
 - `outline-view:show`: open the outline and reveal its dock,
-- `outline-view:toggle`: toggle the outline dock item,
+- `outline-view:toggle`: show or hide the outline dock item,
+- `outline-view:toggle-focus`: focus the outline, or return focus to the editor,
 - `outline-view:reveal-in-outline-view`: select the symbol under the cursor in the outline.
 
 Commands available in `.outline-view`:

@@ -11,6 +11,10 @@
               "command": "outline-view:toggle"
             },
             {
+              "label": "Toggle Focus",
+              "command": "outline-view:toggle-focus"
+            },
+            {
               "label": "Reveal Current Symbol",
               "command": "outline-view:reveal-in-outline-view"
             }

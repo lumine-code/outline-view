@@ -20,7 +20,7 @@
     "lumine": "^1.0.0"
   },
   "backgroundTips": [
-    "You can browse the symbols of the current file as a tree with {{ 'outline-view:toggle' | keystroke }}"
+    "You can browse the symbols of the current file as a tree with {{ 'outline-view:toggle-focus' | keystroke }}"
   ],
   "main": "./lib/main",
   "files": [

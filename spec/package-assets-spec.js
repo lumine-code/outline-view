@@ -4,6 +4,9 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 const exists = (rel) => fs.existsSync(path.join(root, rel));
+// The editor loads keymaps and menus through season, which tolerates comments,
+// so these files may carry them and JSON.parse alone is the wrong reader.
+const readJsonc = (rel) => JSON.parse(read(rel).replace(/^\s*\/\/.*$/gm, ""));
 
 // Guards for the pulsar-outline-view -> outline-view rebrand and the
 // TypeScript/Less -> plain CommonJS/CSS modernization. The command prefix,
@@ -20,8 +23,10 @@ describe("outline-view package assets", () => {
   });
 
   it("uses the outline-view: command prefix in the keymap and menu", () => {
-    const keymap = JSON.parse(read("keymaps/outline-view.json"));
-    expect(keymap["atom-workspace"]["cmdorctrl-alt-o"]).toBe("outline-view:toggle");
+    const keymap = readJsonc("keymaps/outline-view.json");
+    // alt-o is the reveal tier: a bare alt-<letter> per surface, bound to
+    // toggle-focus so a second press returns focus to the editor.
+    expect(keymap["atom-workspace"]["alt-o"]).toBe("outline-view:toggle-focus");
     expect(keymap[".outline-view"]["enter"]).toBe("outline-view:activate-selected-entry");
     expect(read("keymaps/outline-view.json")).not.toContain("pulsar-outline-view:");
 
