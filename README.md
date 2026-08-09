@@ -20,7 +20,7 @@ To install `outline-view` search for _outline-view_ in the Install pane of the L
 
 ## Commands
 
-Commands available in `atom-workspace`:
+Commands available in `lumine-workspace`:
 
 - `outline-view:show`: open the outline and reveal its dock,
 - `outline-view:toggle`: show or hide the outline dock item,

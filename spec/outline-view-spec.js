@@ -1,4 +1,4 @@
-const { Emitter, Point } = require("atom");
+const { Emitter, Point } = require("lumine");
 
 // A stub provider following the `outline-view` service contract (see
 // ide-client's outline provider): `grammarScopes` is a getter, and
@@ -100,7 +100,7 @@ describe("outline-view", () => {
   }
 
   async function openEditorAndView() {
-    editor = await atom.workspace.open();
+    editor = await lumine.workspace.open();
     editor.setText(Array(12).fill("// line").join("\n"));
     view = mainModule.getOutlineView();
     await view.show();
@@ -109,15 +109,15 @@ describe("outline-view", () => {
 
   beforeEach(async () => {
     jasmine.useRealClock();
-    jasmine.attachToDOM(atom.views.getView(atom.workspace));
-    const pack = await atom.packages.activatePackage("outline-view");
+    jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
+    const pack = await lumine.packages.activatePackage("outline-view");
     mainModule = pack.mainModule;
   });
 
   afterEach(async () => {
     providerDisposable?.dispose();
     providerDisposable = null;
-    await atom.packages.deactivatePackage("outline-view");
+    await lumine.packages.deactivatePackage("outline-view");
   });
 
   describe("with an outline-view provider", () => {
@@ -153,12 +153,12 @@ describe("outline-view", () => {
       const selected = await waitFor(() => view.element.querySelector("li.selected"));
       expect(selected.querySelector(".name-inner").textContent).toBe("gamma");
 
-      atom.commands.dispatch(view.element, "outline-view:activate-selected-entry");
+      lumine.commands.dispatch(view.element, "outline-view:activate-selected-entry");
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
     });
 
     it("hides ignored symbol kinds and their descendants", async () => {
-      atom.config.set("outline-view.ignoredSymbolTypes", ["class"]);
+      lumine.config.set("outline-view.ignoredSymbolTypes", ["class"]);
       await waitFor(() => names().length === 1);
       expect(names()).toEqual(["alpha"]);
     });

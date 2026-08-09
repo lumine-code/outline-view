@@ -26,7 +26,7 @@ describe("outline-view package assets", () => {
     const keymap = readJsonc("keymaps/outline-view.json");
     // alt-o is the reveal tier: a bare alt-<letter> per surface, bound to
     // toggle-focus so a second press returns focus to the editor.
-    expect(keymap["atom-workspace"]["alt-o"]).toBe("outline-view:toggle-focus");
+    expect(keymap["lumine-workspace"]["alt-o"]).toBe("outline-view:toggle-focus");
     expect(keymap[".outline-view"]["enter"]).toBe("outline-view:activate-selected-entry");
     expect(read("keymaps/outline-view.json")).not.toContain("pulsar-outline-view:");
 
