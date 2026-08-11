@@ -8,7 +8,12 @@
     "enter": "outline-view:activate-selected-entry",
     "left": "outline-view:collapse-selected-entry",
     "escape": "outline-view:unfocus",
+    "tab": "outline-view:toggle-search-focus",
     "home": "core:move-to-top",
     "end": "core:move-to-bottom"
+  },
+  ".outline-search": {
+    "escape": "outline-view:clear-search",
+    "tab": "outline-view:toggle-search-focus"
   }
 }

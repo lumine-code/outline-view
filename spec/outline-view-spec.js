@@ -162,6 +162,20 @@ describe("outline-view", () => {
       await waitFor(() => names().length === 1);
       expect(names()).toEqual(["alpha"]);
     });
+
+    it("filters symbols from the search panel and clears the query", async () => {
+      expect(view.refs.searchEditor.getPlaceholderText()).toBe("Search...");
+
+      view.refs.searchEditor.setText("gm");
+      await waitFor(() => names().length === 1);
+      expect(names()).toEqual(["gamma"]);
+      expect(view.element.querySelectorAll(".character-match").length).toBe(2);
+
+      lumine.commands.dispatch(view.refs.searchEditor.element, "outline-view:clear-search");
+      await waitFor(() => names().length === 3);
+      expect(view.refs.searchEditor.getText()).toBe("");
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+    });
   });
 
   describe("with only the symbol.registry fallback", () => {

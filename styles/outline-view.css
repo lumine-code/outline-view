@@ -4,8 +4,43 @@
   color: var(--text-color);
   background-color: var(--tree-view-background-color);
   contain: size;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   user-select: none;
+}
+
+.outline-view .outline-search {
+  display: block;
+  position: relative;
+  flex: none;
+  margin: 0.375em;
+}
+
+.outline-view .outline-search lumine-text-editor {
+  font-size: var(--font-size);
+}
+
+.outline-view .outline-search .icon-remove-close {
+  display: none;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.outline-view .outline-search:hover .icon-remove-close {
+  display: block;
+}
+
+.outline-view .outline-search:hover .icon-remove-close:hover {
+  color: var(--text-color-highlight);
+  cursor: default;
+}
+
+.outline-view .outline-scroller {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .outline-view .icon::before {
@@ -68,6 +103,10 @@
   max-width: 100%;
 }
 
+.outline-view .name-inner .character-match {
+  text-decoration: underline;
+}
+
 .outline-view .outline-view-option.list-item {
   display: flex;
   flex-direction: row;
@@ -76,4 +115,8 @@
 
 .outline-view .outline-view-option.list-item::before {
   flex: none;
+}
+
+.outline-view .outline-view-option.list-item:hover {
+  background-color: var(--background-color-highlight);
 }
