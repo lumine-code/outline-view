@@ -16,7 +16,7 @@ The outline lives in a dock and follows the active editor: it lists the document
 
 ## Installation
 
-To install `outline-view` search for _outline-view_ in the Install pane of the Lumine settings or run `lumine --install lumine-code/outline-view`.
+To install `outline-view` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/outline-view`.
 
 ## Commands
 
@@ -48,8 +48,8 @@ The outline appearance can be tweaked from your `styles.css`:
 
 ## Services
 
-- **[outline.provider](docs/outline.provider.md)** (`^1.0.0`): consumed to receive document outlines from language servers and other outline providers.
-- **symbol.registry** (`^1.0.0`): consumed to build a fallback outline from the symbol hub when no outline provider matches the editor.
+- [`outline.provider`](docs/outline.provider.md): consumed to receive document outlines from language servers and other outline providers.
+- `symbol.registry`: consumed to build a fallback outline from the symbol hub when no outline provider matches the editor.
 
 ## Contributing
 
