@@ -14,8 +14,8 @@ const readJsonc = (rel) => JSON.parse(read(rel).replace(/^\s*\/\/.*$/gm, ""));
 // `outline-view`; the consumed service names stay the same.
 describe("outline-view package assets", () => {
   it("ships keymaps and menus as JSON, not CSON", () => {
-    expect(exists("keymaps/outline-view.json")).toBe(true);
-    expect(exists("menus/outline-view.json")).toBe(true);
+    expect(exists("keymaps/main.json")).toBe(true);
+    expect(exists("menus/main.json")).toBe(true);
     expect(exists("keymaps/pulsar-outline-view.json")).toBe(false);
     expect(exists("menus/pulsar-outline-view.json")).toBe(false);
     expect(exists("keymaps/outline-view.cson")).toBe(false);
@@ -23,14 +23,14 @@ describe("outline-view package assets", () => {
   });
 
   it("uses the outline-view: command prefix in the keymap and menu", () => {
-    const keymap = readJsonc("keymaps/outline-view.json");
+    const keymap = readJsonc("keymaps/main.json");
     // alt-o is the reveal tier: a bare alt-<letter> per surface, bound to
     // toggle-focus so a second press returns focus to the editor.
     expect(keymap["lumine-workspace"]["alt-o"]).toBe("outline-view:toggle-focus");
     expect(keymap[".outline-view"]["enter"]).toBe("outline-view:activate-selected-entry");
-    expect(read("keymaps/outline-view.json")).not.toContain("pulsar-outline-view:");
+    expect(read("keymaps/main.json")).not.toContain("pulsar-outline-view:");
 
-    const menu = JSON.parse(read("menus/outline-view.json"));
+    const menu = JSON.parse(read("menus/main.json"));
     const flat = JSON.stringify(menu);
     expect(flat).toContain("outline-view:toggle");
     expect(flat).not.toContain("pulsar-outline-view");
@@ -39,10 +39,10 @@ describe("outline-view package assets", () => {
   });
 
   it("ships a CSS stylesheet built on custom properties, not Less", () => {
-    expect(exists("styles/outline-view.css")).toBe(true);
+    expect(exists("styles/main.css")).toBe(true);
     expect(exists("styles/pulsar-outline-view.less")).toBe(false);
     expect(exists("styles/outline-view.less")).toBe(false);
-    const css = read("styles/outline-view.css");
+    const css = read("styles/main.css");
     expect(css).toContain(".outline-view");
     expect(css).toContain("var(--");
     expect(css).not.toContain("pulsar-outline-view");
