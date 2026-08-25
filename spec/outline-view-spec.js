@@ -157,6 +157,28 @@ describe("outline-view", () => {
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
     });
 
+    it("resolves the active symbol once when multiple cursors move", () => {
+      editor.setSelectedBufferRanges([
+        [
+          [0, 1],
+          [0, 1],
+        ],
+        [
+          [4, 3],
+          [4, 3],
+        ],
+        [
+          [8, 1],
+          [8, 1],
+        ],
+      ]);
+      const getActiveSymbol = spyOn(view, "getActiveSymbolForEditor").and.callThrough();
+
+      editor.selectRight();
+
+      expect(getActiveSymbol.calls.count()).toBe(1);
+    });
+
     it("hides ignored symbol kinds and their descendants", async () => {
       lumine.config.set("outline-view.ignoredSymbolTypes", ["class"]);
       await waitFor(() => names().length === 1);
