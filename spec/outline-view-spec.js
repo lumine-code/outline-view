@@ -69,29 +69,6 @@ function makeSymbolRegistry() {
   };
 }
 
-function waitFor(condition, timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const poll = () => {
-      let value;
-      try {
-        value = condition();
-      } catch (error) {
-        reject(error);
-        return;
-      }
-      if (value) {
-        resolve(value);
-      } else if (Date.now() - start > timeout) {
-        reject(new Error("Timed out waiting for condition"));
-      } else {
-        setTimeout(poll, 20);
-      }
-    };
-    poll();
-  });
-}
-
 describe("outline-view", () => {
   let mainModule, editor, view, providerDisposable;
 
@@ -104,7 +81,9 @@ describe("outline-view", () => {
     editor.setText(Array(12).fill("// line").join("\n"));
     view = mainModule.getOutlineView();
     await view.show();
-    await waitFor(() => view.element.querySelector("li.outline-view-entry"));
+    await waitForFrames(() => view.element.querySelector("li.outline-view-entry"), {
+      description: "the outline to render its first entry",
+    });
   }
 
   beforeEach(async () => {
@@ -150,7 +129,10 @@ describe("outline-view", () => {
 
     it("tracks the cursor and confirms the selected entry", async () => {
       editor.setCursorBufferPosition([4, 3]);
-      const selected = await waitFor(() => view.element.querySelector("li.selected"));
+      await waitForFrames(() => view.element.querySelector("li.selected"), {
+        description: "the active outline entry to be selected",
+      });
+      const selected = view.element.querySelector("li.selected");
       expect(selected.querySelector(".name-inner").textContent).toBe("gamma");
 
       lumine.commands.dispatch(view.element, "outline-view:activate-selected-entry");
@@ -181,7 +163,9 @@ describe("outline-view", () => {
 
     it("hides ignored symbol kinds and their descendants", async () => {
       lumine.config.set("outline-view.ignoredSymbolTypes", ["class"]);
-      await waitFor(() => names().length === 1);
+      await waitForFrames(() => names().length === 1, {
+        description: "ignored symbols to disappear from the outline",
+      });
       expect(names()).toEqual(["alpha"]);
     });
 
@@ -189,12 +173,16 @@ describe("outline-view", () => {
       expect(view.refs.searchEditor.getPlaceholderText()).toBe("Search...");
 
       view.refs.searchEditor.setText("gm");
-      await waitFor(() => names().length === 1);
+      await waitForFrames(() => names().length === 1, {
+        description: "the outline search results to render",
+      });
       expect(names()).toEqual(["gamma"]);
       expect(view.element.querySelectorAll(".character-match").length).toBe(2);
 
       lumine.commands.dispatch(view.refs.searchEditor.element, "outline-view:clear-search");
-      await waitFor(() => names().length === 3);
+      await waitForFrames(() => names().length === 3, {
+        description: "the full outline to return after clearing the search",
+      });
       expect(view.refs.searchEditor.getText()).toBe("");
       expect(names()).toEqual(["alpha", "Beta", "gamma"]);
     });
@@ -233,7 +221,9 @@ describe("outline-view", () => {
     it("refreshes when the registry announces an invalidation", async () => {
       registry.symbols = [{ name: "zeta", position: new Point(3, 0), tag: "function" }];
       registry.invalidate({ editor, provider: null });
-      await waitFor(() => names().length === 1);
+      await waitForFrames(() => names().length === 1, {
+        description: "the invalidated outline to render",
+      });
       expect(names()).toEqual(["zeta"]);
     });
 
