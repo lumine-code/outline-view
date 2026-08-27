@@ -62,8 +62,10 @@
 }
 
 .outline-view ul.background-message {
-  padding-top: 50px;
-  text-align: center;
+  position: relative;
+  top: 45%;
+  margin-left: 2px;
+  margin-right: 2px;
 }
 
 .outline-view ul.outline-list-root.outline-list {

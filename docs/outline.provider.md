@@ -34,6 +34,7 @@ type OutlineProvider = {
   getOutline(editor: TextEditor): Promise<Outline | null> | Outline | null;
   grammarScopes?: string[];
   priority?: number;
+  onDidInvalidate?(callback: (event?: { editor?: TextEditor }) => void): Disposable;
 };
 
 type Outline = {
@@ -57,6 +58,7 @@ type OutlineTree = {
 | `getOutline(editor)` | Required. Return the tree, or `null` when you have nothing.       |
 | `grammarScopes`      | Scope names you serve. May be a getter, and is read on every use. |
 | `priority`           | Higher wins. Defaults to `0`.                                     |
+| `onDidInvalidate`    | Optional signal that an outline is ready to be fetched again.     |
 
 A node needs a `startPosition` and something to display. The label is resolved in order: `tokenizedText` (rendered with syntax highlighting), then `plainText`, then `representativeName`. `endPosition` defaults to `startPosition`, which makes the node a point rather than a range.
 
@@ -94,6 +96,8 @@ module.exports = {
 `grammarScopes` may be a getter whose value changes over time — a hub provider's set grows as language server sessions start — so it is re-read on every selection rather than snapshotted.
 
 `getOutline` is called when the panel refreshes, which follows the active editor and its changes. It should be cheap enough to run after an edit settles.
+
+When availability can change without an editor event — for example, while a language server starts — implement `onDidInvalidate`. Emit `{ editor }` to refresh one editor or omit it to refresh whichever served editor is active.
 
 Supply `endPosition` when you can: it is what lets the panel highlight the node covering the cursor rather than only exact starts.
 

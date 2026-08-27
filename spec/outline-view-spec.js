@@ -4,6 +4,7 @@ const { Emitter, Point } = require("lumine");
 // ide-client's outline provider): `grammarScopes` is a getter, and
 // `startPosition`/`endPosition` are point-compatible `[row, column]` arrays.
 function makeOutlineProvider() {
+  const emitter = new Emitter();
   return {
     name: "Stub Outline",
     priority: 2,
@@ -41,6 +42,12 @@ function makeOutlineProvider() {
           },
         ],
       };
+    },
+    onDidInvalidate(callback) {
+      return emitter.on("did-invalidate", callback);
+    },
+    invalidate(bundle = { editor: null }) {
+      emitter.emit("did-invalidate", bundle);
     },
   };
 }
@@ -99,10 +106,46 @@ describe("outline-view", () => {
     await lumine.packages.deactivatePackage("outline-view");
   });
 
+  describe("empty states", () => {
+    async function openEmptyView() {
+      editor = await lumine.workspace.open();
+      view = mainModule.getOutlineView();
+      await view.show();
+      await waitForFrames(() => view.element.querySelector("background-tips li"), {
+        description: "the outline empty state to render",
+      });
+      return view.element.querySelector("background-tips");
+    }
+
+    it("reports an unsupported grammar using the navigation-panel message style", async () => {
+      const message = await openEmptyView();
+
+      expect(message.querySelector("ul").classList.contains("centered")).toBe(true);
+      expect(message.textContent).toBe("This grammar is not supported");
+    });
+
+    it("reports a supported editor with no symbols", async () => {
+      const provider = makeOutlineProvider();
+      provider.getOutline = async () => ({ outlineTrees: [] });
+      providerDisposable = mainModule.consumeOutline(provider);
+
+      const message = await openEmptyView();
+
+      expect(message.textContent).toBe("No symbols");
+    });
+  });
+
   describe("with an outline-view provider", () => {
+    let outlineProvider;
+
     beforeEach(async () => {
-      providerDisposable = mainModule.consumeOutline(makeOutlineProvider());
+      outlineProvider = makeOutlineProvider();
+      providerDisposable = mainModule.consumeOutline(outlineProvider);
       await openEditorAndView();
+    });
+
+    afterEach(() => {
+      outlineProvider = null;
     });
 
     it("renders the outline as a nested tree in the dock item", () => {
@@ -137,6 +180,49 @@ describe("outline-view", () => {
 
       lumine.commands.dispatch(view.element, "outline-view:activate-selected-entry");
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
+    });
+
+    it("refreshes when the active provider becomes ready", async () => {
+      outlineProvider.getOutline = async () => ({
+        outlineTrees: [
+          {
+            kind: "function",
+            plainText: "ready",
+            startPosition: [1, 0],
+            endPosition: [2, 0],
+          },
+        ],
+      });
+
+      outlineProvider.invalidate({ editor });
+
+      await waitForFrames(() => names().length === 1 && names()[0] === "ready", {
+        description: "the outline provider's ready result to render",
+      });
+    });
+
+    it("follows the workspace center while the outline dock has focus", async () => {
+      const center = lumine.workspace.getCenter();
+      expect(lumine.workspace.getActivePaneContainer()).not.toBe(center);
+
+      const nextEditor = lumine.workspace.buildTextEditor();
+      center.getActivePane().addItem(nextEditor);
+      center.getActivePane().activateItem(nextEditor);
+
+      expect(lumine.workspace.getActivePaneContainer()).not.toBe(center);
+      expect(view.activeEditor).toBe(nextEditor);
+
+      const plainItem = {
+        element: document.createElement("div"),
+        getTitle: () => "Plain",
+      };
+      center.getActivePane().addItem(plainItem);
+      center.getActivePane().activateItem(plainItem);
+
+      expect(view.activeEditor).toBeNull();
+      await waitForFrames(() => names().length === 0, {
+        description: "the outline to clear for a non-editor center item",
+      });
     });
 
     it("resolves the active symbol once when multiple cursors move", () => {
