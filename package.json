@@ -49,14 +49,9 @@
     "prettier": "^3.9.6"
   },
   "consumedServices": {
-    "outline.provider": {
-      "versions": {
-        "^1.0.0": "consumeOutline"
-      }
-    },
     "symbol.registry": {
       "versions": {
-        "^1.0.0": "consumeSymbolRegistry"
+        "^1.1.0": "consumeSymbolRegistry"
       }
     }
   },

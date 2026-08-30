@@ -65,10 +65,10 @@ describe("outline-view package assets", () => {
     expect(exists("dist")).toBe(false);
   });
 
-  it("consumes the outline.provider and symbol.registry services", () => {
+  it("consumes the hierarchical symbol.registry service", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.consumedServices["outline.provider"].versions["^1.0.0"]).toBe("consumeOutline");
-    expect(pkg.consumedServices["symbol.registry"].versions["^1.0.0"]).toBe(
+    expect(pkg.consumedServices["outline.provider"]).toBeUndefined();
+    expect(pkg.consumedServices["symbol.registry"].versions["^1.1.0"]).toBe(
       "consumeSymbolRegistry",
     );
     // Raw `symbol.provider` consumption moved into the symbol hub.
