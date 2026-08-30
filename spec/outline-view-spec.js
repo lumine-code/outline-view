@@ -45,7 +45,7 @@ function makeSymbolRegistry() {
 }
 
 describe("outline-view", () => {
-  let mainModule, editor, view, providerDisposable;
+  let mainModule, editor, view, providerDisposable, iconRegistration;
 
   function names() {
     return Array.from(view.element.querySelectorAll(".name-inner")).map((el) => el.textContent);
@@ -71,6 +71,8 @@ describe("outline-view", () => {
   afterEach(async () => {
     providerDisposable?.dispose();
     providerDisposable = null;
+    iconRegistration?.dispose();
+    iconRegistration = null;
     await lumine.packages.deactivatePackage("outline-view");
   });
 
@@ -121,9 +123,42 @@ describe("outline-view", () => {
       expect(nested.querySelector(".name-inner").textContent).toBe("Beta");
       expect(nested.querySelectorAll("ul.outline-list li.outline-view-entry").length).toBe(1);
 
-      // Icons are derived from the provider's `kind` values.
+      // Icons are derived from symbol tags through the shared icon registry.
       const alphaName = view.element.querySelector(".name-inner");
-      expect(alphaName.parentNode.classList.contains("icon-gear")).toBe(true);
+      const alphaIcon = alphaName.parentNode.querySelector(".outline-symbol-icon");
+      expect(alphaIcon.classList).toContain("icon");
+      expect(alphaIcon.classList).toContain("icon-gear");
+    });
+
+    it("uses and live-updates the shared kind icon registry", async () => {
+      const beta = Array.from(view.element.querySelectorAll(".name-inner")).find(
+        (element) => element.textContent === "Beta",
+      );
+      expect(beta.parentNode.querySelector(".outline-symbol-icon").classList).toContain(
+        "icon-puzzle",
+      );
+
+      iconRegistration = lumine.icons.addProvider(
+        {
+          id: "outline-view-spec",
+          handles: ["kind"],
+          iconFor(target) {
+            return target.context === "outline-view" && target.kind === "class"
+              ? "icon-flame"
+              : null;
+          },
+        },
+        { priority: 100 },
+      );
+      await waitForFrames(() => beta.parentNode.querySelector(".outline-symbol-icon.icon-flame"), {
+        description: "the outline icon to repaint from the shared provider",
+      });
+
+      iconRegistration.dispose();
+      iconRegistration = null;
+      await waitForFrames(() => beta.parentNode.querySelector(".outline-symbol-icon.icon-puzzle"), {
+        description: "the outline icon to return to the core kind mapping",
+      });
     });
 
     it("moves the cursor to a symbol when its entry is clicked", () => {

@@ -43,10 +43,6 @@
   overflow: auto;
 }
 
-.outline-view .icon::before {
-  font-size: var(--font-size);
-}
-
 .outline-view.with-ellipsis-strategy ul.outline-list-root.outline-list {
   min-width: unset;
 }
@@ -92,12 +88,8 @@
   align-items: center;
 }
 
-.outline-view .name::before {
+.outline-view .outline-symbol-icon {
   flex: none;
-  position: relative;
-  top: -1px;
-  text-align: center;
-  margin-right: 5px;
 }
 
 .outline-view .name-inner {

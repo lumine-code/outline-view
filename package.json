@@ -70,7 +70,7 @@
     },
     "ignoredSymbolTypes": {
       "title": "Ignored Symbol Types",
-      "description": "A comma-separated list of symbol types to ignore, keyed on a symbol's `icon` or `kind`. Hover over a symbol in the outline; if a string appears in parentheses in the tooltip, that value can be used to ignore that kind of symbol. All descendants of an ignored symbol are also ignored.",
+      "description": "A comma-separated list of symbol types to ignore, keyed on a symbol's `icon` or `tag`. Hover over a symbol in the outline; if a string appears in parentheses in the tooltip, that value can be used to ignore that kind of symbol. All descendants of an ignored symbol are also ignored.",
       "type": "array",
       "items": {
         "type": "string"
