@@ -1,4 +1,4 @@
-const { Emitter, Point, Range } = require("lumine");
+const { Emitter, Icon, Point, Range } = require("lumine");
 
 // A stub following the `symbol.registry` service contract, as provided by
 // the symbol hub: the hierarchy and normalized locations are already cached.
@@ -142,9 +142,10 @@ describe("outline-view", () => {
         {
           id: "outline-view-spec",
           handles: ["kind"],
+          usesContext: true,
           iconFor(target) {
             return target.context === "outline-view" && target.kind === "class"
-              ? "icon-flame"
+              ? Icon.classes(["icon-flame"])
               : null;
           },
         },
@@ -159,6 +160,39 @@ describe("outline-view", () => {
       await waitForFrames(() => beta.parentNode.querySelector(".outline-symbol-icon.icon-puzzle"), {
         description: "the outline icon to return to the core kind mapping",
       });
+    });
+
+    it("routes an explicit symbol icon through the shared name registry", async () => {
+      registry.symbols[0].icon = "flame";
+      registry.invalidate({ editor, provider: null });
+      await waitForFrames(
+        () =>
+          Array.from(view.element.querySelectorAll(".name-inner"))
+            .find((element) => element.textContent === "alpha")
+            ?.parentNode.querySelector(".outline-symbol-icon.icon-flame"),
+        { description: "the explicit symbol icon to render" },
+      );
+
+      iconRegistration = lumine.icons.addProvider(
+        {
+          id: "outline-view-explicit-spec",
+          handles: ["name"],
+          usesContext: true,
+          iconFor(target) {
+            return target.context === "outline-view" && target.name === "flame"
+              ? Icon.classes(["icon-star"])
+              : null;
+          },
+        },
+        { priority: 100 },
+      );
+      await waitForFrames(
+        () =>
+          Array.from(view.element.querySelectorAll(".name-inner"))
+            .find((element) => element.textContent === "alpha")
+            ?.parentNode.querySelector(".outline-symbol-icon.icon-star"),
+        { description: "the explicit icon to repaint from the shared provider" },
+      );
     });
 
     it("moves the cursor to a symbol when its entry is clicked", () => {
