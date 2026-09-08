@@ -76,6 +76,47 @@ describe("outline-view", () => {
     await lumine.packages.deactivatePackage("outline-view");
   });
 
+  describe("workspace serialization", () => {
+    it("restores one view and wires a symbol registry delivered later", async () => {
+      await lumine.packages.deactivatePackage("outline-view");
+      const pack = lumine.packages.getLoadedPackage("outline-view");
+      mainModule = pack.mainModule;
+      const activate = spyOn(mainModule, "activate").and.callThrough();
+      const initialActivation = spyOn(
+        lumine.packages,
+        "hasActivatedInitialPackages",
+      ).and.returnValue(false);
+      const state = { deserializer: "outline-view/OutlineView" };
+      view = lumine.deserializers.deserialize(state);
+
+      expect(view.serialize()).toEqual(state);
+      expect(mainModule.getOutlineView()).toBe(view);
+      expect(lumine.deserializers.deserialize(view.serialize())).toBe(view);
+      expect(activate).not.toHaveBeenCalled();
+
+      initialActivation.and.callThrough();
+      await lumine.packages.activatePackage("outline-view");
+      expect(activate.calls.count()).toBe(1);
+      expect(mainModule.getOutlineView()).toBe(view);
+
+      const registry = makeSymbolRegistry();
+      providerDisposable = mainModule.consumeSymbolRegistry(registry);
+      editor = await lumine.workspace.open();
+      editor.setText(Array(12).fill("// line").join("\n"));
+      await view.show();
+      await waitForFrames(() => view.element.querySelector("li.outline-view-entry"), {
+        description: "the restored outline to receive symbols",
+      });
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+
+      await lumine.workspace.paneForItem(view).destroyItem(view);
+      expect(mainModule.outlineView).toBeNull();
+      const reopened = lumine.deserializers.deserialize(state);
+      expect(reopened).not.toBe(view);
+      expect(mainModule.getOutlineView()).toBe(reopened);
+    });
+  });
+
   describe("empty states", () => {
     async function openEmptyView() {
       editor = await lumine.workspace.open();
