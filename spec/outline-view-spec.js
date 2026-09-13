@@ -76,6 +76,17 @@ describe("outline-view", () => {
     await lumine.packages.deactivatePackage("outline-view");
   });
 
+  it("puts the configured default side first", () => {
+    view = mainModule.getOutlineView();
+    lumine.config.set("outline-view.showOnRightSide", false);
+    expect(view.getDefaultLocation()).toBe("left");
+    expect(view.getAllowedLocations()).toEqual(["left", "right"]);
+
+    lumine.config.set("outline-view.showOnRightSide", true);
+    expect(view.getDefaultLocation()).toBe("right");
+    expect(view.getAllowedLocations()).toEqual(["right", "left"]);
+  });
+
   describe("workspace serialization", () => {
     it("restores one view and wires a symbol registry delivered later", async () => {
       await lumine.packages.deactivatePackage("outline-view");
