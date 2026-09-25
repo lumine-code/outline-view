@@ -73,7 +73,9 @@ describe("outline-view package assets", () => {
     );
     // Raw `symbol.provider` consumption moved into the symbol hub.
     expect(pkg.consumedServices["symbol.provider"]).toBeUndefined();
-    expect(pkg.providedServices).toBeUndefined();
+    expect(pkg.providedServices["background-tips.provider"].versions["1.0.0"]).toBe(
+      "provideBackgroundTips",
+    );
   });
 
   it("defines the config schema under the outline-view namespace without order keys", () => {
