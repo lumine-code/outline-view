@@ -114,3 +114,20 @@
 .outline-view .outline-view-option.list-item:hover {
   background-color: var(--background-color-highlight);
 }
+
+/* Cursor position and keyboard choice use the same two cues as navigation-panel. */
+.outline-view .outline-view-entry.current > .name .name-inner,
+.outline-view .outline-view-entry.current > .outline-view-option > .name .name-inner {
+  font-weight: bold;
+}
+
+.outline-view .outline-view-entry.selected::before {
+  display: none;
+}
+
+.outline-view .outline-list li.outline-view-entry.selected:not(.list-nested-item),
+.outline-view .outline-list li.outline-view-entry.selected > .outline-view-option {
+  color: var(--text-color);
+  outline: 1px dotted var(--text-color-highlight);
+  outline-offset: -2px;
+}

@@ -1,4 +1,6 @@
 const { Emitter, Icon, Point, Range } = require("lumine");
+const fs = require("fs");
+const path = require("path");
 
 // A stub following the `symbol.registry` service contract, as provided by
 // the symbol hub: the hierarchy and normalized locations are already cached.
@@ -59,6 +61,10 @@ describe("outline-view", () => {
 
   function selectedName() {
     return view.element.querySelector("li.selected .name-inner")?.textContent;
+  }
+
+  function currentName() {
+    return view.element.querySelector("li.current .name-inner")?.textContent;
   }
 
   function pressKey(key, target = document.activeElement, options = {}) {
@@ -292,17 +298,86 @@ describe("outline-view", () => {
       expect(lumine.workspace.getActivePaneContainer()).toBe(lumine.workspace.getCenter());
     });
 
-    it("tracks the cursor and confirms the selected entry", async () => {
-      editor.setCursorBufferPosition([4, 3]);
-      await waitForFrames(() => view.element.querySelector("li.selected"), {
-        description: "the active outline entry to be selected",
+    it("tracks the current symbol and confirms it without creating keyboard selection", async () => {
+      editor.setCursorBufferPosition([5, 3]);
+      await waitForFrames(() => currentName() === "gamma", {
+        description: "the symbol containing the cursor to become current",
       });
-      const selected = view.element.querySelector("li.selected");
-      expect(selected.querySelector(".name-inner").textContent).toBe("gamma");
+      expect(selectedName()).toBeUndefined();
 
       lumine.commands.dispatch(view.element, "outline-view:activate-selected-entry");
       await waitForEditorFocus([4, 2]);
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
+      expect(currentName()).toBe("gamma");
+      expect(selectedName()).toBeUndefined();
+    });
+
+    it("tracks whole symbol bodies, picks nested ranges, and clears outside them", () => {
+      for (const [position, current] of [
+        [[1, 3], "alpha"],
+        [[3, 1], "Beta"],
+        [[4, 0], "Beta"],
+        [[5, 3], "gamma"],
+        [[7, 1], "Beta"],
+        [[10, 0], undefined],
+      ]) {
+        editor.setCursorBufferPosition(position);
+        expect(currentName()).toBe(current);
+        expect(selectedName()).toBeUndefined();
+      }
+    });
+
+    it("prefers the deepest range when nested symbols start at the same position", async () => {
+      const gamma = registry.symbols[1].children[0];
+      gamma.position = new Point(3, 0);
+      gamma.range = new Range([3, 0], [6, 0]);
+      gamma.children = [
+        {
+          name: "delta",
+          position: new Point(3, 0),
+          range: new Range([3, 0], [4, 0]),
+          children: [],
+        },
+      ];
+      registry.invalidate({ editor });
+      await waitForFrames(() => names().includes("delta"), {
+        description: "the symbols sharing a start position to render",
+      });
+
+      editor.setCursorBufferPosition([3, 0]);
+      expect(currentName()).toBe("delta");
+      editor.setCursorBufferPosition([5, 1]);
+      expect(currentName()).toBe("gamma");
+      editor.setCursorBufferPosition([7, 1]);
+      expect(currentName()).toBe("Beta");
+      expect(selectedName()).toBeUndefined();
+    });
+
+    it("keeps the same-row fallback when no range contains the cursor", () => {
+      editor.setCursorBufferPosition([2, 3]);
+      expect(currentName()).toBe("alpha");
+      editor.setCursorBufferPosition([10, 0]);
+      expect(currentName()).toBeUndefined();
+    });
+
+    it("follows only the last cursor, including cursor additions and removals", () => {
+      editor.setCursorBufferPosition([1, 1]);
+      const first = editor.getLastCursor();
+      expect(currentName()).toBe("alpha");
+      const last = editor.addCursorAtBufferPosition([5, 3]);
+      expect(currentName()).toBe("gamma");
+
+      first.setBufferPosition([1, 2]);
+      expect(currentName()).toBe("gamma");
+      last.setBufferPosition([8, 1]);
+      expect(currentName()).toBe("Beta");
+      last.setBufferPosition([11, 0]);
+      expect(currentName()).toBeUndefined();
+      last.destroy();
+
+      expect(editor.getLastCursor()).toBe(first);
+      expect(currentName()).toBe("alpha");
+      expect(selectedName()).toBeUndefined();
     });
 
     describe("panel keyboard navigation", () => {
@@ -314,9 +389,9 @@ describe("outline-view", () => {
 
       it("wraps through visible symbols while keeping focus in the list", () => {
         const initialPosition = editor.getCursorBufferPosition();
-        view.setSelectedSymbol(null);
         view.focus();
-        expect(selectedName()).toBe("alpha");
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBe("alpha");
         expect(document.activeElement).toBe(view.refs.scroller);
 
         pressKey("ArrowUp");
@@ -334,6 +409,7 @@ describe("outline-view", () => {
 
         expect(editor.getCursorBufferPosition()).toEqual(initialPosition);
         expect(document.activeElement).toBe(view.refs.scroller);
+        expect(currentName()).toBe("alpha");
       });
 
       it("collapses with Left, expands with Right, and collapses a leaf's parent", () => {
@@ -394,15 +470,20 @@ describe("outline-view", () => {
         view.setSelectedSymbol(null);
         editor.setCursorBufferPosition([11, 0]);
         view.focus();
-        expect(selectedName()).toBe("alpha");
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBeUndefined();
         expect(editor.getCursorBufferPosition().isEqual([11, 0])).toBe(true);
 
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("alpha");
+        expect(currentName()).toBe("alpha");
         pressKey("ArrowDown");
         await waitForFrames(() => editor.getCursorBufferPosition().isEqual([3, 0]), {
           description: "the keyboard selection to preview its symbol",
         });
 
         expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("Beta");
         expect(document.activeElement).toBe(view.refs.scroller);
       });
 
@@ -459,26 +540,203 @@ describe("outline-view", () => {
         expect(searchEditor.element.contains(document.activeElement)).toBe(true);
       });
 
-      it("selects filtered entries with Up and Down while search keeps focus", async () => {
+      it("starts from the current filtered entry and gives the list focus on movement", async () => {
         view.focusSearch();
         view.refs.searchEditor.setText("a");
         await waitForFrames(() => view.searchResults?.length === 3 && names().length === 3, {
           description: "the query to render its symbol choices",
         });
         const choices = names();
-        view.setSelectedSymbol(null);
+        const currentIndex = choices.indexOf("alpha");
 
         pressKey("ArrowDown");
-        expect(selectedName()).toBe(choices[0]);
+        expect(selectedName()).toBe(choices[(currentIndex + 1) % choices.length]);
         pressKey("ArrowDown");
-        expect(selectedName()).toBe(choices[1]);
+        expect(selectedName()).toBe(choices[(currentIndex + 2) % choices.length]);
         pressKey("ArrowUp");
-        expect(selectedName()).toBe(choices[0]);
+        expect(selectedName()).toBe(choices[(currentIndex + 1) % choices.length]);
         pressKey("ArrowUp");
-        expect(selectedName()).toBe(choices[2]);
+        expect(selectedName()).toBe("alpha");
 
         expect(editor.getCursorBufferPosition().isEqual([0, 0])).toBe(true);
+        expect(document.activeElement).toBe(view.refs.scroller);
+      });
+
+      it("keeps keyboard selection independent of current cursor tracking", () => {
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("alpha");
+
+        editor.setCursorBufferPosition([5, 3]);
+        expect(currentName()).toBe("gamma");
+        expect(selectedName()).toBe("Beta");
+        pressKey("ArrowUp");
+        expect(selectedName()).toBe("alpha");
+        expect(currentName()).toBe("gamma");
+        expect(view.element.querySelectorAll("li.selected").length).toBe(1);
+        expect(view.element.querySelectorAll("li.current").length).toBe(1);
+      });
+
+      it("shows current text in bold and keyboard choice with a dotted row outline", () => {
+        editor.setCursorBufferPosition([8, 1]);
+        view.setSelectedSymbol(registry.symbols[1].children[0]);
+        const betaName = entryNamed("Beta").querySelector(".name-inner");
+        const gamma = entryNamed("gamma");
+        const gammaName = gamma.querySelector(".name-inner");
+
+        expect(Number(getComputedStyle(betaName).fontWeight)).toBeGreaterThanOrEqual(600);
+        expect(Number(getComputedStyle(gammaName).fontWeight)).toBe(400);
+        expect(getComputedStyle(gamma).outlineStyle).toBe("dotted");
+        expect(getComputedStyle(gamma, "::before").display).toBe("none");
+
+        editor.setCursorBufferPosition([5, 3]);
+        expect(Number(getComputedStyle(betaName).fontWeight)).toBe(400);
+        expect(Number(getComputedStyle(gammaName).fontWeight)).toBeGreaterThanOrEqual(600);
+        expect(getComputedStyle(gamma).outlineStyle).toBe("dotted");
+      });
+
+      it("keeps selected leaf and branch text normal under the real One UI theme", () => {
+        const themePackage = lumine.packages.loadPackage("one-theme");
+        const themePath = path.join(themePackage.path, "styles", "ui", "main.css");
+        const snapshot = lumine.styles.getSnapshot();
+        const originalStyle = view.element.getAttribute("style");
+        let themeStyle;
+        try {
+          // Match ThemePackage's priority so the theme loads after package styles.
+          themeStyle = lumine.styles.addStyleSheet(fs.readFileSync(themePath, "utf8"), {
+            priority: 1,
+          });
+          view.element.style.setProperty("--text-color", "#112233");
+          view.element.style.setProperty("--text-color-highlight", "#abcdef");
+          editor.setCursorBufferPosition([8, 1]);
+
+          for (const symbol of [registry.symbols[1].children[0], registry.symbols[1]]) {
+            view.setSelectedSymbol(symbol);
+            const entry = entryNamed(symbol.name);
+            const row = entry.matches(".list-nested-item")
+              ? entry.querySelector(":scope > .outline-view-option")
+              : entry;
+
+            expect(getComputedStyle(row.querySelector(".name-inner")).color).toBe(
+              "rgb(17, 34, 51)",
+            );
+            expect(getComputedStyle(row).outlineStyle).toBe("dotted");
+            expect(getComputedStyle(row).outlineColor).toBe("rgb(171, 205, 239)");
+            expect(getComputedStyle(entry, "::before").display).toBe("none");
+            expect(
+              Number(getComputedStyle(entryNamed("Beta").querySelector(".name-inner")).fontWeight),
+            ).toBeGreaterThanOrEqual(600);
+            expect(
+              Number(getComputedStyle(entryNamed("gamma").querySelector(".name-inner")).fontWeight),
+            ).toBe(400);
+          }
+        } finally {
+          themeStyle?.dispose();
+          lumine.styles.restoreSnapshot(snapshot);
+          if (originalStyle === null) view.element.removeAttribute("style");
+          else view.element.setAttribute("style", originalStyle);
+        }
+      });
+
+      it("preserves selection through Tab and clears it after leaving the panel", async () => {
+        pressKey("ArrowDown");
+        pressKey("Tab");
+        const started = performance.now();
+        await waitForFrames(() => performance.now() - started > 100, {
+          description: "an internal focus change to outlast the selection reset delay",
+        });
+        expect(selectedName()).toBe("Beta");
         expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
+        pressKey("Tab");
+        expect(selectedName()).toBe("Beta");
+        expect(document.activeElement).toBe(view.refs.scroller);
+
+        lumine.views.getView(editor).focus();
+        await waitForFrames(() => selectedName() === undefined, {
+          description: "keyboard selection to clear after the outline loses focus",
+        });
+        expect(currentName()).toBe("alpha");
+        editor.setCursorBufferPosition([5, 3]);
+        view.focus();
+        expect(selectedName()).toBeUndefined();
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("alpha");
+        expect(currentName()).toBe("gamma");
+      });
+
+      it("maps a current child to its collapsed parent and restores it when expanded", () => {
+        editor.setCursorBufferPosition([5, 3]);
+        expect(currentName()).toBe("gamma");
+        view.setSelectedSymbol(registry.symbols[1]);
+        view.focusSearch();
+        lumine.commands.dispatch(
+          view.refs.searchEditor.element,
+          "outline-view:collapse-selected-entry",
+        );
+
+        expect(document.activeElement).toBe(view.refs.scroller);
+        expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("Beta");
+        expect(view.currentSymbol).toBe(registry.symbols[1].children[0]);
+        pressKey("ArrowRight");
+        expect(currentName()).toBe("gamma");
+        expect(selectedName()).toBe("Beta");
+        expect(editor.getCursorBufferPosition().isEqual([5, 3])).toBe(true);
+      });
+
+      it("preserves visible selection across config, search, and registry refreshes", async () => {
+        pressKey("ArrowDown");
+        editor.setCursorBufferPosition([5, 3]);
+        lumine.config.set("outline-view.nameOverflowStrategy", "ellipsis");
+        await waitForFrames(() => view.element.classList.contains("with-ellipsis-strategy"), {
+          description: "the changed configuration to redraw the outline",
+        });
+        expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("gamma");
+
+        view.refs.searchEditor.setText("a");
+        await waitForFrames(() => view.searchResults?.length === 3, {
+          description: "all symbols to survive the query",
+        });
+        expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("gamma");
+        registry.symbols = makeSymbolRegistry().symbols;
+        registry.invalidate({ editor });
+        await view.populateForEditor(editor);
+        expect(selectedName()).toBe("Beta");
+        expect(currentName()).toBe("gamma");
+
+        view.refs.searchEditor.setText("gm");
+        await waitForFrames(() => names().length === 1, {
+          description: "the query to hide the previous keyboard selection",
+        });
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBe("gamma");
+        await view.clearSearch();
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBe("gamma");
+      });
+
+      it("creates no keyboard selection from focus, search, or refreshed symbols", async () => {
+        expect(selectedName()).toBeUndefined();
+        view.focus();
+        expect(selectedName()).toBeUndefined();
+        view.refs.searchEditor.setText("gm");
+        await waitForFrames(() => names().length === 1, {
+          description: "the query to show a single result without selecting it",
+        });
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBeUndefined();
+        await view.clearSearch();
+        registry.invalidate({ editor });
+        await view.populateForEditor(editor);
+        expect(selectedName()).toBeUndefined();
+        expect(currentName()).toBe("alpha");
+
+        editor.setCursorBufferPosition([11, 0]);
+        pressKey("Enter");
+        await waitForEditorFocus([0, 0]);
+        expect(selectedName()).toBeUndefined();
       });
 
       it("keeps the source editor when it changes while Alt navigation clears search", async () => {
@@ -554,6 +812,7 @@ describe("outline-view", () => {
           await waitForFrames(() => names().length === 1, {
             description: "the symbol to become the only search result",
           });
+          view.setSelectedSymbol(registry.symbols[1].children[0]);
           if (route === "keyboard") {
             view.focusSearch();
             pressKey("Enter", document.activeElement, { ctrlKey: true });
@@ -569,11 +828,9 @@ describe("outline-view", () => {
             [4, 2],
           ]);
           expect(view.refs.searchEditor.getText()).toBe("gm");
-          if (route === "keyboard") {
-            expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
-          } else {
-            expect(document.activeElement).toBe(view.refs.scroller);
-          }
+          expect(document.activeElement).toBe(view.refs.scroller);
+          expect(currentName()).toBe("gamma");
+          expect(selectedName()).toBe("gamma");
         });
       }
     });
@@ -594,6 +851,8 @@ describe("outline-view", () => {
       await waitForFrames(() => names().length === 1 && names()[0] === "ready", {
         description: "the invalidated registry result to render",
       });
+      expect(selectedName()).toBeUndefined();
+      expect(currentName()).toBeUndefined();
     });
 
     it("follows the workspace center while the outline dock has focus", async () => {
@@ -679,6 +938,8 @@ describe("outline-view", () => {
 
     it("clears current unavailable results and selection while preserving empty results", async () => {
       editor.setCursorBufferPosition([4, 3]);
+      expect(currentName()).toBe("gamma");
+      view.setSelectedSymbol(registry.symbols[1]);
       expect(view.getSelectedSymbol()).not.toBeNull();
       registry.symbols = null;
       registry.invalidate();
@@ -686,6 +947,8 @@ describe("outline-view", () => {
         description: "unavailable results to clear the old outline",
       });
       expect(view.getSelectedSymbol()).toBeNull();
+      expect(currentName()).toBeUndefined();
+      expect(view.currentSymbol).toBeNull();
       expect(view.element.querySelector("background-tips").textContent).toBe(
         "Symbol information is unavailable.",
       );

@@ -52,6 +52,23 @@ describe("outline-view real symbol registry integration", () => {
     );
   }
 
+  function currentName() {
+    return view.element.querySelector("li.current .name-inner")?.textContent;
+  }
+
+  it("tracks the deepest parsed symbol throughout its body without selecting it", async () => {
+    await waitForFrames(() => currentName() === "inner", {
+      description: "the cursor inside the method body to mark the method current",
+    });
+    expect(view.element.querySelector("li.selected")).toBeNull();
+
+    editor.setCursorBufferPosition([4, 0]);
+    expect(currentName()).toBe("Outer");
+    editor.setCursorBufferPosition([5, 9]);
+    expect(currentName()).toBe("after");
+    expect(view.element.querySelector("li.selected")).toBeNull();
+  });
+
   it("navigates real symbols and retires a withdrawn provider generation", async () => {
     const inner = Array.from(view.element.querySelectorAll(".name-inner")).find(
       (element) => element.textContent === "inner",

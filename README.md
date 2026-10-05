@@ -8,7 +8,7 @@ The outline lives in a dock and follows the active editor: it lists the document
 
 - **Symbol tree**: renders the document's symbols as a collapsible tree in a dock item.
 - **Navigation**: click an entry, or confirm it with the keyboard, to move the cursor to that symbol and focus the editor.
-- **Cursor tracking**: selects the entry of the symbol under the cursor as it moves through the file.
+- **Cursor tracking**: marks the symbol containing the last cursor in bold, independently of the temporary outline selection.
 - **Live refresh**: rebuilds the outline as the buffer changes, honoring providers that prefer refresh on save.
 - **Shared symbols**: renders the hierarchical tree cached by the symbol hub, shared with Go to Symbol and breadcrumbs.
 - **Filtering**: hides chosen symbol kinds via the ignored-symbol-types setting.
@@ -25,7 +25,7 @@ Commands available in `lumine-workspace`:
 - `outline-view:show`: open the outline and reveal its dock,
 - `outline-view:toggle`: show or hide the outline dock item,
 - `outline-view:toggle-focus`: focus the outline, or return focus to the editor,
-- `outline-view:reveal-in-outline-view`: select the symbol under the cursor in the outline.
+- `outline-view:reveal-in-outline-view`: reveal the symbol under the cursor in the outline.
 
 Commands available in `.outline-view`:
 
