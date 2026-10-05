@@ -70,8 +70,8 @@
   isolation: isolate;
   position: relative;
   min-width: min-content;
-  /* Imitate what's built into tree-view. */
-  padding: 0 10px 0 5px;
+  /* Align the tree's leading edge with the search field. */
+  padding: 0 0 0 5px;
 }
 
 .outline-view ul.outline-list {
