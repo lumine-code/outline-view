@@ -8,7 +8,7 @@ The outline lives in a dock and follows the active editor: it lists the document
 
 - **Symbol tree**: renders the document's symbols as a collapsible tree in a dock item.
 - **Navigation**: click an entry, or confirm it with the keyboard, to move the cursor to that symbol and focus the editor.
-- **Cursor tracking**: marks the symbol containing the last cursor in bold, independently of the temporary outline selection.
+- **Cursor tracking**: marks the symbol containing the last cursor in bold and shades its ancestor branches in layers, independently of the temporary outline selection.
 - **Live refresh**: rebuilds the outline as the buffer changes, honoring providers that prefer refresh on save.
 - **Shared symbols**: renders the hierarchical tree cached by the symbol hub, shared with Go to Symbol and breadcrumbs.
 - **Filtering**: hides chosen symbol kinds via the ignored-symbol-types setting.

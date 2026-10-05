@@ -380,6 +380,118 @@ describe("outline-view", () => {
       expect(selectedName()).toBeUndefined();
     });
 
+    describe("cursor hierarchy background", () => {
+      function stackedNames() {
+        return Array.from(view.element.querySelectorAll("li.outline-view-entry.stack")).map(
+          (entry) => entry.querySelector(".name-inner").textContent,
+        );
+      }
+
+      beforeEach(async () => {
+        registry.symbols[1].children[0].children = [
+          {
+            name: "delta",
+            position: new Point(5, 4),
+            range: new Range([5, 4], [5, 8]),
+            tag: "variable",
+            children: [],
+          },
+        ];
+        registry.symbols[1].children.push({
+          name: "epsilon",
+          position: new Point(7, 2),
+          range: new Range([7, 2], [7, 6]),
+          tag: "method",
+          children: [],
+        });
+        registry.invalidate({ editor });
+        await waitForFrames(() => names().includes("epsilon"), {
+          description: "the nested symbols and their sibling to render",
+        });
+        editor.setCursorBufferPosition([5, 5]);
+      });
+
+      it("layers the current symbol and ancestors while keeping keyboard choice independent", () => {
+        expect(currentName()).toBe("delta");
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+        for (const name of ["Beta", "gamma", "delta"]) {
+          expect(getComputedStyle(entryNamed(name)).backgroundColor).toBe(
+            "rgba(127, 127, 127, 0.1)",
+          );
+        }
+        for (const name of ["alpha", "epsilon"]) {
+          expect(getComputedStyle(entryNamed(name)).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+        }
+
+        view.setSelectedSymbol(registry.symbols[1].children[1]);
+        expect(selectedName()).toBe("epsilon");
+        expect(getComputedStyle(entryNamed("epsilon")).outlineStyle).toBe("dotted");
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+
+        const last = editor.addCursorAtBufferPosition([1, 1]);
+        expect(currentName()).toBe("alpha");
+        expect(stackedNames()).toEqual(["alpha"]);
+        expect(selectedName()).toBe("epsilon");
+        last.destroy();
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+        editor.setCursorBufferPosition([11, 0]);
+        expect(stackedNames()).toEqual([]);
+      });
+
+      it("shades only the visible hierarchy when its branches collapse and expand", () => {
+        view.setEntryCollapsed(entryNamed("gamma"), true);
+        expect(currentName()).toBe("gamma");
+        expect(stackedNames()).toEqual(["Beta", "gamma"]);
+        view.setEntryCollapsed(entryNamed("Beta"), true);
+        expect(currentName()).toBe("Beta");
+        expect(stackedNames()).toEqual(["Beta"]);
+
+        view.setEntryCollapsed(entryNamed("Beta"), false);
+        expect(stackedNames()).toEqual(["Beta", "gamma"]);
+        view.setEntryCollapsed(entryNamed("gamma"), false);
+        expect(currentName()).toBe("delta");
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+        expect(editor.getCursorBufferPosition().isEqual([5, 5])).toBe(true);
+      });
+
+      it("rebuilds the hierarchy background after filtering and symbol replacement", async () => {
+        view.refs.searchEditor.setText("delta");
+        await waitForFrames(() => names().length === 1 && currentName() === "delta", {
+          description: "the current symbol to become a flat search result",
+        });
+        expect(stackedNames()).toEqual(["delta"]);
+        view.refs.searchEditor.setText("epsilon");
+        await waitForFrames(() => names().length === 1 && names()[0] === "epsilon", {
+          description: "search to hide the current symbol",
+        });
+        expect(stackedNames()).toEqual([]);
+        await view.clearSearch();
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+
+        const previousSymbols = registry.symbols;
+        registry.symbols = [
+          {
+            name: "ready",
+            position: new Point(5, 0),
+            range: new Range([5, 0], [6, 0]),
+            tag: "function",
+            children: [],
+          },
+        ];
+        registry.invalidate({ editor });
+        await waitForFrames(() => currentName() === "ready", {
+          description: "the replacement tree to track the current cursor",
+        });
+        expect(stackedNames()).toEqual(["ready"]);
+        registry.symbols = previousSymbols;
+        registry.invalidate({ editor });
+        await waitForFrames(() => currentName() === "delta", {
+          description: "the restored tree to rebuild the current hierarchy",
+        });
+        expect(stackedNames()).toEqual(["Beta", "gamma", "delta"]);
+      });
+    });
+
     describe("panel keyboard navigation", () => {
       beforeEach(() => {
         lumine.keymaps.loadBundledKeymaps();

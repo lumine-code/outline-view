@@ -1,4 +1,6 @@
 .outline-view {
+  --outline-shader: rgba(127, 127, 127, 0.1);
+
   font-size: var(--font-size);
   font-weight: 400;
   color: var(--text-color);
@@ -112,10 +114,15 @@
 }
 
 .outline-view .outline-view-option.list-item:hover {
-  background-color: var(--background-color-highlight);
+  background-image: linear-gradient(var(--outline-shader), var(--outline-shader));
 }
 
 /* Cursor position and keyboard choice use the same two cues as navigation-panel. */
+.outline-view .outline-view-entry.stack {
+  background-color: var(--outline-shader);
+  background-clip: content-box;
+}
+
 .outline-view .outline-view-entry.current > .name .name-inner,
 .outline-view .outline-view-entry.current > .outline-view-option > .name .name-inner {
   font-weight: bold;
