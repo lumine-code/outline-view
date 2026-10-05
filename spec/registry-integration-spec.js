@@ -192,13 +192,13 @@ describe("outline-view real symbol registry integration", () => {
     await lumine.packages.activatePackage(packagePath("language-text"));
     editor.setGrammar(lumine.grammars.grammarForScopeName("text.plain"));
     await editor.whenGrammarSettled();
-    expect(await registry.getFileSymbolTree(editor)).toBeNull();
+    expect(await registry.getFileSymbolTree(editor)).toEqual([]);
+    expect(registry.getDocumentSourceState(editor).status).toBe("ready");
+    expect(registry.getDocumentSourceState(editor).source.id).toBe("symbol-tree-sitter");
     await waitForFrames(() => names().length === 0, {
-      description: "unsupported grammar to clear the previous symbols",
+      description: "a grammar without tags to clear the previous symbols",
     });
-    expect(view.element.querySelector("background-tips").textContent).toBe(
-      "Symbol information is unavailable.",
-    );
+    expect(view.element.querySelector("background-tips").textContent).toBe("No symbols");
   });
 
   it("switches all consumers through one shared fetch and reuses each current source", async () => {
