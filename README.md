@@ -7,7 +7,7 @@ The outline lives in a dock and follows the active editor: it lists the document
 ## Features
 
 - **Symbol tree**: renders the document's symbols as a collapsible tree in a dock item.
-- **Navigation**: click an entry, or confirm it with the keyboard, to move the cursor to that symbol.
+- **Navigation**: click an entry, or confirm it with the keyboard, to move the cursor to that symbol and focus the editor.
 - **Cursor tracking**: selects the entry of the symbol under the cursor as it moves through the file.
 - **Live refresh**: rebuilds the outline as the buffer changes, honoring providers that prefer refresh on save.
 - **Shared symbols**: renders the hierarchical tree cached by the symbol hub, shared with Go to Symbol and breadcrumbs.
@@ -29,8 +29,16 @@ Commands available in `lumine-workspace`:
 
 Commands available in `.outline-view`:
 
-- `outline-view:activate-selected-entry`: move the editor to the selected symbol,
-- `outline-view:collapse-selected-entry`: collapse or expand the selected entry,
+- `outline-view:select-previous-entry`: select the previous visible symbol,
+- `outline-view:select-next-entry`: select the next visible symbol,
+- `outline-view:collapse-selected-entry`: collapse the selected branch, or select and collapse its parent,
+- `outline-view:expand-selected-entry`: expand the selected branch,
+- `outline-view:activate-selected-entry`: move to the selected symbol and focus its editor,
+- `outline-view:activate-selected-entry-clear-search`: move to the selected symbol, clear search, and focus its editor,
+- `outline-view:activate-selected-entry-add-cursor`: add a cursor at the selected symbol while keeping the outline focused,
+- `outline-view:clear-search`: empty the outline's search field,
+- `outline-view:focus-search`: focus the outline's search field,
+- `outline-view:toggle-search-focus`: move focus between the search field and the symbol tree,
 - `outline-view:unfocus`: return focus to the workspace center.
 
 ## Customization

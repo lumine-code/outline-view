@@ -5,10 +5,17 @@
     "alt-o": "outline-view:toggle-focus"
   },
   ".outline-view": {
+    "up": "outline-view:select-previous-entry",
+    "down": "outline-view:select-next-entry",
     "enter": "outline-view:activate-selected-entry",
+    "alt-enter": "outline-view:activate-selected-entry-clear-search",
+    "ctrl-enter": "outline-view:activate-selected-entry-add-cursor",
+    "escape": "outline-view:clear-search",
+    "tab": "outline-view:toggle-search-focus"
+  },
+  ".outline-scroller": {
     "left": "outline-view:collapse-selected-entry",
-    "escape": "outline-view:unfocus",
-    "tab": "outline-view:toggle-search-focus",
+    "right": "outline-view:expand-selected-entry",
     "home": "core:move-to-top",
     "end": "core:move-to-bottom"
   },

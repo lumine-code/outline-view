@@ -51,6 +51,37 @@ describe("outline-view", () => {
     return Array.from(view.element.querySelectorAll(".name-inner")).map((el) => el.textContent);
   }
 
+  function entryNamed(name) {
+    return Array.from(view.element.querySelectorAll(".name-inner"))
+      .find((element) => element.textContent === name)
+      ?.closest("li.outline-view-entry");
+  }
+
+  function selectedName() {
+    return view.element.querySelector("li.selected .name-inner")?.textContent;
+  }
+
+  function pressKey(key, target = document.activeElement, options = {}) {
+    const event = new KeyboardEvent("keydown", {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    Object.defineProperty(event, "target", { get: () => target });
+    Object.defineProperty(event, "path", { get: () => [target] });
+    lumine.keymaps.handleKeyboardEvent(event);
+  }
+
+  async function waitForEditorFocus(position) {
+    await waitForFrames(
+      () =>
+        editor.getCursorBufferPosition().isEqual(position) &&
+        lumine.views.getView(editor).contains(document.activeElement),
+      { description: "the outline navigation to move and focus the editor" },
+    );
+  }
+
   async function openEditorAndView() {
     editor = await lumine.workspace.open();
     editor.setText(Array(12).fill("// line").join("\n"));
@@ -248,12 +279,17 @@ describe("outline-view", () => {
       );
     });
 
-    it("moves the cursor to a symbol when its entry is clicked", () => {
-      const gammaInner = Array.from(view.element.querySelectorAll(".name-inner")).find(
-        (el) => el.textContent === "gamma",
-      );
-      gammaInner.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    it("moves and focuses the editor when a symbol entry is clicked", async () => {
+      view.focus();
+      expect(document.activeElement).toBe(view.refs.scroller);
+
+      entryNamed("gamma")
+        .querySelector(".name-inner")
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await waitForEditorFocus([4, 2]);
+
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
+      expect(lumine.workspace.getActivePaneContainer()).toBe(lumine.workspace.getCenter());
     });
 
     it("tracks the cursor and confirms the selected entry", async () => {
@@ -265,7 +301,281 @@ describe("outline-view", () => {
       expect(selected.querySelector(".name-inner").textContent).toBe("gamma");
 
       lumine.commands.dispatch(view.element, "outline-view:activate-selected-entry");
+      await waitForEditorFocus([4, 2]);
       expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
+    });
+
+    describe("panel keyboard navigation", () => {
+      beforeEach(() => {
+        lumine.keymaps.loadBundledKeymaps();
+        editor.setCursorBufferPosition([0, 0]);
+        view.focus();
+      });
+
+      it("wraps through visible symbols while keeping focus in the list", () => {
+        const initialPosition = editor.getCursorBufferPosition();
+        view.setSelectedSymbol(null);
+        view.focus();
+        expect(selectedName()).toBe("alpha");
+        expect(document.activeElement).toBe(view.refs.scroller);
+
+        pressKey("ArrowUp");
+        expect(selectedName()).toBe("gamma");
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("alpha");
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("Beta");
+        pressKey("ArrowLeft");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(true);
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("alpha");
+        pressKey("ArrowUp");
+        expect(selectedName()).toBe("Beta");
+
+        expect(editor.getCursorBufferPosition()).toEqual(initialPosition);
+        expect(document.activeElement).toBe(view.refs.scroller);
+      });
+
+      it("collapses with Left, expands with Right, and collapses a leaf's parent", () => {
+        pressKey("ArrowDown");
+        pressKey("ArrowLeft");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(true);
+        pressKey("ArrowLeft");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(true);
+        pressKey("ArrowRight");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(false);
+        pressKey("ArrowRight");
+        expect(selectedName()).toBe("Beta");
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe("gamma");
+        pressKey("ArrowLeft");
+        expect(selectedName()).toBe("Beta");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(true);
+        expect(document.activeElement).toBe(view.refs.scroller);
+      });
+
+      it("selects and collapses the parent of an already collapsed branch", async () => {
+        registry.symbols[1].children[0].children = [
+          {
+            name: "delta",
+            position: new Point(5, 4),
+            range: new Range([5, 4], [5, 8]),
+            tag: "variable",
+            children: [],
+          },
+        ];
+        registry.invalidate({ editor });
+        await waitForFrames(() => names().includes("delta"), {
+          description: "the nested branch to render",
+        });
+        view.setSelectedSymbol(registry.symbols[1].children[0]);
+        view.focus();
+
+        pressKey("ArrowLeft");
+        expect(selectedName()).toBe("gamma");
+        expect(entryNamed("gamma").classList.contains("collapsed")).toBe(true);
+        pressKey("ArrowLeft");
+        expect(selectedName()).toBe("Beta");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(true);
+      });
+
+      it("confirms with Enter and focuses the editor", async () => {
+        pressKey("ArrowDown");
+        pressKey("ArrowDown");
+        pressKey("Enter");
+
+        await waitForEditorFocus([4, 2]);
+        expect(editor.getCursorBufferPosition().isEqual([4, 2])).toBe(true);
+      });
+
+      it("previews keyboard selections without taking focus from the list", async () => {
+        lumine.config.set("outline-view.visitEntriesOnKeyboardMovement", true);
+        view.focusSearch();
+        view.setSelectedSymbol(null);
+        editor.setCursorBufferPosition([11, 0]);
+        view.focus();
+        expect(selectedName()).toBe("alpha");
+        expect(editor.getCursorBufferPosition().isEqual([11, 0])).toBe(true);
+
+        pressKey("ArrowDown");
+        await waitForFrames(() => editor.getCursorBufferPosition().isEqual([3, 0]), {
+          description: "the keyboard selection to preview its symbol",
+        });
+
+        expect(selectedName()).toBe("Beta");
+        expect(document.activeElement).toBe(view.refs.scroller);
+      });
+
+      it("uses Tab to switch focus and Escape to clear search from either surface", async () => {
+        pressKey("Tab");
+        expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
+        view.refs.searchEditor.setText("gm");
+        await waitForFrames(() => names().length === 1, {
+          description: "the search to filter symbols",
+        });
+        pressKey("Escape");
+        await waitForFrames(() => names().length === 3, {
+          description: "Escape in search to restore the full outline",
+        });
+        expect(view.refs.searchEditor.getText()).toBe("");
+        expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
+
+        view.refs.searchEditor.setText("gm");
+        await waitForFrames(() => names().length === 1, {
+          description: "the search to filter symbols again",
+        });
+        pressKey("Tab");
+        expect(document.activeElement).toBe(view.refs.scroller);
+        pressKey("Escape");
+        await waitForFrames(() => names().length === 3, {
+          description: "Escape in the list to restore the full outline",
+        });
+        expect(view.refs.searchEditor.getText()).toBe("");
+        expect(document.activeElement).toBe(view.refs.scroller);
+      });
+
+      it("keeps Left, Right, Home, and End local to the focused search editor", async () => {
+        view.setSelectedSymbol(registry.symbols[1]);
+        view.focusSearch();
+        const searchEditor = view.refs.searchEditor;
+        searchEditor.setText("a");
+        await waitForFrames(() => view.searchResults?.length === 3 && names().length === 3, {
+          description: "the query to render symbols before editing it",
+        });
+        view.setSelectedSymbol(registry.symbols[1]);
+        searchEditor.setCursorBufferPosition([0, 1]);
+
+        pressKey("ArrowLeft");
+        expect(searchEditor.getCursorBufferPosition().isEqual([0, 0])).toBe(true);
+        pressKey("ArrowRight");
+        expect(searchEditor.getCursorBufferPosition().isEqual([0, 1])).toBe(true);
+        pressKey("Home");
+        expect(searchEditor.getCursorBufferPosition().isEqual([0, 0])).toBe(true);
+        pressKey("End");
+        expect(searchEditor.getCursorBufferPosition().isEqual([0, 1])).toBe(true);
+
+        expect(selectedName()).toBe("Beta");
+        expect(entryNamed("Beta").classList.contains("collapsed")).toBe(false);
+        expect(searchEditor.element.contains(document.activeElement)).toBe(true);
+      });
+
+      it("selects filtered entries with Up and Down while search keeps focus", async () => {
+        view.focusSearch();
+        view.refs.searchEditor.setText("a");
+        await waitForFrames(() => view.searchResults?.length === 3 && names().length === 3, {
+          description: "the query to render its symbol choices",
+        });
+        const choices = names();
+        view.setSelectedSymbol(null);
+
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe(choices[0]);
+        pressKey("ArrowDown");
+        expect(selectedName()).toBe(choices[1]);
+        pressKey("ArrowUp");
+        expect(selectedName()).toBe(choices[0]);
+        pressKey("ArrowUp");
+        expect(selectedName()).toBe(choices[2]);
+
+        expect(editor.getCursorBufferPosition().isEqual([0, 0])).toBe(true);
+        expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
+      });
+
+      it("keeps the source editor when it changes while Alt navigation clears search", async () => {
+        view.setSelectedSymbol(registry.symbols[1].children[0]);
+        let completeClearSearch;
+        spyOn(view, "clearSearch").and.returnValue(
+          new Promise((resolve) => {
+            completeClearSearch = resolve;
+          }),
+        );
+        const activate = spyOn(view, "activateSelectedEntry").and.callThrough();
+        lumine.commands.dispatch(
+          view.refs.scroller,
+          "outline-view:activate-selected-entry-clear-search",
+        );
+        const navigation = activate.calls.mostRecent().returnValue;
+        const nextEditor = await lumine.workspace.open();
+        expect(view.activeEditor).toBe(nextEditor);
+
+        completeClearSearch();
+        await navigation;
+        await waitForEditorFocus([4, 2]);
+
+        expect(lumine.workspace.getCenter().getActivePaneItem()).toBe(editor);
+        expect(nextEditor.getCursorBufferPosition().isEqual([0, 0])).toBe(true);
+      });
+
+      for (const route of ["keyboard", "click"]) {
+        it(`preserves search when opening a symbol by ${route}`, async () => {
+          view.refs.searchEditor.setText("gm");
+          await waitForFrames(() => names().length === 1, {
+            description: "the symbol to become the only search result",
+          });
+          if (route === "keyboard") {
+            view.focusSearch();
+            pressKey("Enter");
+          } else {
+            view.focus();
+            entryNamed("gamma")
+              .querySelector(".name-inner")
+              .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+          }
+
+          await waitForEditorFocus([4, 2]);
+          expect(view.refs.searchEditor.getText()).toBe("gm");
+          expect(names()).toEqual(["gamma"]);
+        });
+
+        it(`clears search and focuses the editor with Alt ${route}`, async () => {
+          view.refs.searchEditor.setText("gm");
+          await waitForFrames(() => names().length === 1, {
+            description: "the symbol to become the only search result",
+          });
+          if (route === "keyboard") {
+            view.focusSearch();
+            pressKey("Enter", document.activeElement, { altKey: true });
+          } else {
+            view.focus();
+            entryNamed("gamma")
+              .querySelector(".name-inner")
+              .dispatchEvent(new MouseEvent("click", { bubbles: true, altKey: true }));
+          }
+
+          await waitForEditorFocus([4, 2]);
+          await waitForFrames(() => names().length === 3, {
+            description: "Alt navigation to restore the full outline",
+          });
+          expect(view.refs.searchEditor.getText()).toBe("");
+        });
+
+        it(`adds a cursor and retains panel focus with Ctrl ${route}`, async () => {
+          view.refs.searchEditor.setText("gm");
+          await waitForFrames(() => names().length === 1, {
+            description: "the symbol to become the only search result",
+          });
+          if (route === "keyboard") {
+            view.focusSearch();
+            pressKey("Enter", document.activeElement, { ctrlKey: true });
+          } else {
+            view.focus();
+            entryNamed("gamma")
+              .querySelector(".name-inner")
+              .dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+          }
+
+          expect(editor.getCursorBufferPositions().map((point) => point.toArray())).toEqual([
+            [0, 0],
+            [4, 2],
+          ]);
+          expect(view.refs.searchEditor.getText()).toBe("gm");
+          if (route === "keyboard") {
+            expect(view.refs.searchEditor.element.contains(document.activeElement)).toBe(true);
+          } else {
+            expect(document.activeElement).toBe(view.refs.scroller);
+          }
+        });
+      }
     });
 
     it("refreshes when the registry invalidates the active editor", async () => {

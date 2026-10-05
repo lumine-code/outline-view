@@ -57,6 +57,12 @@ describe("outline-view real symbol registry integration", () => {
       (element) => element.textContent === "inner",
     );
     inner.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await waitForFrames(
+      () =>
+        editor.getCursorBufferPosition().isEqual([1, 2]) &&
+        lumine.views.getView(editor).contains(document.activeElement),
+      { description: "the real symbol navigation to focus its editor" },
+    );
     expect(editor.getCursorBufferPosition().isEqual([1, 2])).toBe(true);
     await lumine.packages.deactivatePackage("symbol-tree-sitter");
     await waitForFrames(() => names().length === 0, {
