@@ -1088,6 +1088,36 @@ describe("outline-view", () => {
       expect(view.symbols).toBe(registry.symbols);
     });
 
+    it("clears obsolete symbols and selection while their replacement is pending", async () => {
+      view.setSelectedSymbol(registry.symbols[1]);
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      registry.invalidate({ editor });
+      expect(view.symbols).toBeNull();
+      expect(view.getSelectedSymbol()).toBeNull();
+      expect(view.currentSymbol).toBeNull();
+      await waitForFrames(() => names().length === 0, {
+        description: "obsolete outline entries to clear before the source replies",
+      });
+      complete([]);
+      await waitForFrames(
+        () => view.element.querySelector("background-tips").textContent === "No symbols",
+        { description: "the selected source's valid empty result to render" },
+      );
+    });
+
+    it("does not restore keyboard selection into another symbol source", async () => {
+      registry.symbols[1].providerId = "first-source";
+      view.setSelectedSymbol(registry.symbols[1]);
+      registry.symbols = makeSymbolRegistry().symbols;
+      registry.symbols[1].providerId = "second-source";
+      registry.invalidate({ editor });
+      await view.populateForEditor(editor);
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      expect(view.getSelectedSymbol()).toBeNull();
+      expect(selectedName()).toBeUndefined();
+    });
+
     it("discards ranges returned after the buffer changed during a request", async () => {
       let complete;
       registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
