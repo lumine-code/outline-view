@@ -81,6 +81,9 @@ jobs:
         run: |
           install() { npm ci --ignore-scripts; }
           install || install || install
+      - name: Install spec-time packages
+        working-directory: lumine
+        run: node script/install-spec-packages.js --package ../outline-view --home "$RUNNER_TEMP/lumine-spec-home" --github-env "$GITHUB_ENV"
       - name: Download the Electron binary
         working-directory: lumine
         run: node ./node_modules/electron/install.js

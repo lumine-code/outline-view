@@ -114,6 +114,7 @@ describe("outline-view", () => {
       providerDisposable = mainModule.consumeSymbolRegistry(registry);
       editor = await lumine.workspace.open();
       editor.setText(Array(12).fill("// line").join("\n"));
+      registry.invalidate({ editor });
       await view.show();
       await waitForFrames(() => view.element.querySelector("li.outline-view-entry"), {
         description: "the restored outline to receive symbols",
@@ -139,11 +140,11 @@ describe("outline-view", () => {
       return view.element.querySelector("background-tips");
     }
 
-    it("reports an unsupported grammar using the navigation-panel message style", async () => {
+    it("reports unavailable symbols using the navigation-panel message style", async () => {
       const message = await openEmptyView();
 
       expect(message.querySelector("ul").classList.contains("centered")).toBe(true);
-      expect(message.textContent).toBe("This grammar is not supported");
+      expect(message.textContent).toBe("Symbol information is unavailable.");
     });
 
     it("reports a supported editor with no symbols", async () => {
@@ -355,6 +356,63 @@ describe("outline-view", () => {
       });
       expect(view.refs.searchEditor.getText()).toBe("");
       expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+    });
+  });
+  describe("asynchronous symbol generations", () => {
+    let registry;
+
+    beforeEach(async () => {
+      registry = makeSymbolRegistry();
+      providerDisposable = mainModule.consumeSymbolRegistry(registry);
+      await openEditorAndView();
+    });
+
+    it("clears current unavailable results and selection while preserving empty results", async () => {
+      editor.setCursorBufferPosition([4, 3]);
+      expect(view.getSelectedSymbol()).not.toBeNull();
+      registry.symbols = null;
+      registry.invalidate();
+      await waitForFrames(() => names().length === 0, {
+        description: "unavailable results to clear the old outline",
+      });
+      expect(view.getSelectedSymbol()).toBeNull();
+      expect(view.element.querySelector("background-tips").textContent).toBe(
+        "Symbol information is unavailable.",
+      );
+      expect(view.editorSymbolsList.has(editor)).toBe(false);
+      registry.symbols = [];
+      registry.invalidate();
+      await waitForFrames(
+        () => view.element.querySelector("background-tips").textContent === "No symbols",
+        {
+          description: "a valid empty result to show No symbols",
+        },
+      );
+    });
+
+    it("ignores a superseded null response after a newer tree arrives", async () => {
+      const pending = [];
+      registry.getFileSymbolTree = () => new Promise((resolve) => pending.push(resolve));
+      const previous = view.populateForEditor(editor);
+      const current = view.populateForEditor(editor);
+      pending[1](registry.symbols);
+      await current;
+      pending[0](null);
+      await previous;
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      expect(view.symbols).toBe(registry.symbols);
+    });
+
+    it("discards ranges returned after the buffer changed during a request", async () => {
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      const pending = view.populateForEditor(editor);
+      editor.insertText("\n");
+      complete(registry.symbols);
+      await pending;
+      expect(names()).toEqual([]);
+      expect(view.symbols).toBeNull();
+      expect(view.editorSymbolsList.has(editor)).toBe(false);
     });
   });
 });
