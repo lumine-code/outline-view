@@ -1,4 +1,5 @@
 .outline-view {
+  --outline-root-inset: 5px;
   --outline-shader: rgba(127, 127, 127, 0.1);
 
   font-size: var(--font-size);
@@ -70,8 +71,19 @@
   isolation: isolate;
   position: relative;
   min-width: min-content;
-  /* Align the tree's leading edge with the search field. */
-  padding: 0 0 0 5px;
+  padding: 0;
+}
+
+/* Inset the root labels while their backgrounds span the panel. */
+.outline-view ul.outline-list-root.outline-list > .list-nested-item > .outline-view-option,
+.outline-view ul.outline-list-root.outline-list > .list-nested-item > .outline-list {
+  padding-left: var(--outline-root-inset);
+}
+
+.outline-view ul.outline-list-root.outline-list > li.outline-view-entry.list-item {
+  margin-left: 0;
+  padding-left: calc(var(--outline-root-inset) + var(--disclosure-arrow-padding));
+  background-clip: border-box;
 }
 
 .outline-view ul.outline-list {
