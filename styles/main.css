@@ -2,7 +2,7 @@
   --outline-root-inset: 5px;
   --outline-shader: rgba(127, 127, 127, 0.1);
 
-  font-size: var(--font-size);
+  font-size: var(--ui-font-size);
   font-weight: 400;
   color: var(--text-color);
   background-color: var(--tree-view-background-color);
@@ -21,7 +21,7 @@
 }
 
 .outline-view .outline-search lumine-text-editor {
-  font-size: var(--font-size);
+  font-size: var(--ui-font-size);
 }
 
 .outline-view .outline-search .icon-remove-close {
@@ -51,7 +51,7 @@
 }
 
 .outline-view.with-ellipsis-strategy .name {
-  max-width: calc(100% - var(--font-size));
+  max-width: calc(100% - var(--ui-font-size));
 }
 
 .outline-view.with-ellipsis-strategy .name-inner {
