@@ -58,7 +58,7 @@ The outline appearance can be tweaked from your `styles.css`:
 
 - `symbol.registry`: consumed to render the symbol hub's cached document hierarchy.
 
-Selecting a document symbol source in `symbol` also updates the outline and breadcrumbs. A file choice affects that editor, and a grammar preference applies to editors without a file choice. Auto restores the hub's normal source preference and fallback. Entries from the previous source disappear while its replacement is loading.
+Selecting a document symbol source in `symbol` also updates the outline and breadcrumbs. A file choice affects that editor, and a grammar preference applies to editors without a file choice. Auto restores the hub's normal source preference and fallback. During refreshes, the current outline stays visible for up to 200 ms and is replaced directly when new symbols arrive. A longer request clears the old entries until its result is ready.
 
 ## Contributing
 

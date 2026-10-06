@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { Emitter } = require("lumine");
 const packagePath = (name) => {
@@ -13,9 +14,10 @@ describe("outline-view real symbol registry integration", () => {
   let sourceRegistration;
   let sourceEmitter;
   let otherEditors;
+  let useMockClock = false;
 
   beforeEach(async () => {
-    jasmine.useRealClock();
+    if (!useMockClock) jasmine.useRealClock();
     otherEditors = [];
     jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
     for (const name of ["language-javascript", "symbol", "symbol-tree-sitter"]) {
@@ -232,6 +234,77 @@ describe("outline-view real symbol registry integration", () => {
     expect(source.calls).toBe(1);
   });
 
+  describe("fast refreshes", () => {
+    beforeAll(() => (useMockClock = true));
+    afterAll(() => (useMockClock = false));
+    for (const trigger of ["typing", "save"]) {
+      it(`keeps outline and breadcrumb contents visible while a fast ${trigger} refresh replaces them`, async () => {
+        const savedPath =
+          trigger === "save"
+            ? path.join(os.tmpdir(), `lumine-outline-save-${process.pid}-${Date.now()}.js`)
+            : null;
+        if (savedPath) {
+          editor.getBuffer().setPath(savedPath);
+          await registry.getFileSymbolTree(editor);
+        }
+        const breadcrumbs = await openBreadcrumbs();
+        const { source, id } = await registerSource();
+        registry.setDocumentSource(editor, id);
+        await waitForFrames(
+          () => names().includes("Semantic") && breadcrumbs.names().includes("Semantic"),
+          { description: "the selected source's initial symbols to reach both consumers" },
+        );
+        const emptyStates = [];
+        const observer = new MutationObserver(() => {
+          if (
+            !names().length ||
+            !breadcrumbs.names().length ||
+            view.element.querySelector("background-tips")
+          ) {
+            emptyStates.push(true);
+          }
+        });
+        observer.observe(view.element, { childList: true, subtree: true });
+        observer.observe(breadcrumbs.view.element, { childList: true, subtree: true });
+        try {
+          source.mode = "pending";
+          if (trigger === "typing") {
+            editor.insertText(" ");
+            advanceClock(300);
+          } else {
+            await editor.save();
+          }
+          await flushMicrotasks();
+          expect(source.complete).toEqual(jasmine.any(Function));
+          advanceClock(150);
+          await view.update();
+          expect(names()).toEqual(["Semantic"]);
+          expect(breadcrumbs.names()).toEqual(["Semantic"]);
+          expect(view.element.querySelector("background-tips")).toBeNull();
+          source.complete([
+            {
+              name: "Updated",
+              tag: "class",
+              position: [0, 0],
+              range: [
+                [0, 0],
+                [6, 0],
+              ],
+            },
+          ]);
+          await waitForFrames(
+            () => names().includes("Updated") && breadcrumbs.names().includes("Updated"),
+            { description: "fresh symbols to replace both retained consumer views" },
+          );
+          expect(emptyStates).toEqual([]);
+        } finally {
+          observer.disconnect();
+          if (savedPath && fs.existsSync(savedPath)) fs.unlinkSync(savedPath);
+        }
+      });
+    }
+  });
+
   it("clears the selected source's empty, unavailable and failed results without fallback", async () => {
     const breadcrumbs = await openBreadcrumbs();
     const filePath = breadcrumbs.view.fileContent.textContent;
@@ -244,7 +317,7 @@ describe("outline-view real symbol registry integration", () => {
     source.invalidate();
     expect(await registry.getFileSymbolTree(editor)).toEqual([]);
     await waitForFrames(
-      () => view.element.querySelector("background-tips").textContent === "No symbols",
+      () => view.element.querySelector("background-tips")?.textContent === "No symbols",
       {
         description: "a valid empty result to clear the selected outline",
       },
@@ -320,7 +393,7 @@ describe("outline-view real symbol registry integration", () => {
     expect(source.calls).toBe(2);
   });
 
-  it("withdraws a previous selected source while its late response is pending", async () => {
+  it("withdraws a previous selected source after the grace period while its late response is pending", async () => {
     const breadcrumbs = await openBreadcrumbs();
     const filePath = breadcrumbs.view.fileContent.textContent;
     const { source, id } = await registerSource();

@@ -48,6 +48,7 @@ function makeSymbolRegistry() {
 
 describe("outline-view", () => {
   let mainModule, editor, view, providerDisposable, iconRegistration;
+  let useMockClock = false;
 
   function names() {
     return Array.from(view.element.querySelectorAll(".name-inner")).map((el) => el.textContent);
@@ -99,7 +100,7 @@ describe("outline-view", () => {
   }
 
   beforeEach(async () => {
-    jasmine.useRealClock();
+    if (!useMockClock) jasmine.useRealClock();
     jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
     const pack = await lumine.packages.activatePackage("outline-view");
     mainModule = pack.mainModule;
@@ -1042,6 +1043,9 @@ describe("outline-view", () => {
   describe("asynchronous symbol generations", () => {
     let registry;
 
+    beforeAll(() => (useMockClock = true));
+    afterAll(() => (useMockClock = false));
+
     beforeEach(async () => {
       registry = makeSymbolRegistry();
       providerDisposable = mainModule.consumeSymbolRegistry(registry);
@@ -1088,22 +1092,127 @@ describe("outline-view", () => {
       expect(view.symbols).toBe(registry.symbols);
     });
 
-    it("clears obsolete symbols and selection while their replacement is pending", async () => {
+    it("replaces a fast refresh without clearing the tree or cursor and keyboard highlights", async () => {
+      editor.setCursorBufferPosition([4, 3]);
+      view.focus();
+      view.setSelectedSymbol(registry.symbols[1]);
+      const previousList = view.refs.list;
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      registry.invalidate({ editor });
+      advanceClock(199);
+      await view.update();
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      expect(selectedName()).toBe("Beta");
+      expect(currentName()).toBe("gamma");
+      expect(view.refs.list).toBe(previousList);
+      expect(view.element.querySelector("background-tips")).toBeNull();
+
+      registry.symbols = makeSymbolRegistry().symbols;
+      registry.symbols[0].name = "updated";
+      complete(registry.symbols);
+      await waitForFrames(() => names()[0] === "updated", {
+        description: "the refreshed tree to replace the retained outline",
+      });
+      expect(selectedName()).toBe("Beta");
+      expect(currentName()).toBe("gamma");
+      expect(view.element.querySelector("background-tips")).toBeNull();
+      advanceClock(1000);
+      await view.update();
+      expect(names()).toEqual(["updated", "Beta", "gamma"]);
+    });
+
+    it("clears symbols after the refresh grace period and restores keyboard selection on completion", async () => {
+      view.focus();
       view.setSelectedSymbol(registry.symbols[1]);
       let complete;
       registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
       registry.invalidate({ editor });
+      expect(view.symbols).toBe(registry.symbols);
+      expect(selectedName()).toBe("Beta");
+      advanceClock(200);
       expect(view.symbols).toBeNull();
       expect(view.getSelectedSymbol()).toBeNull();
       expect(view.currentSymbol).toBeNull();
       await waitForFrames(() => names().length === 0, {
         description: "obsolete outline entries to clear before the source replies",
       });
-      complete([]);
-      await waitForFrames(
-        () => view.element.querySelector("background-tips").textContent === "No symbols",
-        { description: "the selected source's valid empty result to render" },
-      );
+      registry.symbols = makeSymbolRegistry().symbols;
+      complete(registry.symbols);
+      await waitForFrames(() => selectedName() === "Beta", {
+        description: "the refreshed symbols to restore the previous keyboard selection",
+      });
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+    });
+
+    it("restarts the grace period without accepting earlier timers or responses", async () => {
+      const pending = [];
+      registry.getFileSymbolTree = () => new Promise((resolve) => pending.push(resolve));
+      registry.invalidate({ editor });
+      advanceClock(150);
+      registry.invalidate({ editor });
+      advanceClock(100);
+      await view.update();
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      pending[1](makeSymbolRegistry().symbols);
+      await flushMicrotasks();
+      await view.update();
+      pending[0](null);
+      await flushMicrotasks();
+      advanceClock(1000);
+      await view.update();
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      expect(view.element.querySelector("background-tips")).toBeNull();
+    });
+
+    it("keeps refresh timers and responses from clearing a newly active editor", async () => {
+      let complete;
+      const nextSymbols = makeSymbolRegistry().symbols;
+      nextSymbols[0].name = "next";
+      registry.getFileSymbolTree = (target) =>
+        target === editor
+          ? new Promise((resolve) => (complete = resolve))
+          : Promise.resolve(nextSymbols);
+      registry.invalidate({ editor });
+      const nextEditor = await lumine.workspace.open();
+      await waitForFrames(() => names()[0] === "next", {
+        description: "the newly active editor's outline to render",
+      });
+      advanceClock(200);
+      complete(null);
+      await flushMicrotasks();
+      await view.update();
+      expect(view.activeEditor).toBe(nextEditor);
+      expect(names()).toEqual(["next", "Beta", "gamma"]);
+    });
+
+    it("cancels a pending refresh when the symbol registry is replaced", async () => {
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      registry.invalidate({ editor });
+      const replacement = makeSymbolRegistry();
+      replacement.symbols[0].name = "replacement";
+      view.setRegistry(replacement);
+      await waitForFrames(() => names()[0] === "replacement", {
+        description: "the replacement registry's tree to render",
+      });
+      advanceClock(200);
+      complete(null);
+      await flushMicrotasks();
+      await view.update();
+      expect(names()).toEqual(["replacement", "Beta", "gamma"]);
+    });
+
+    it("cancels a pending refresh when its view is destroyed", async () => {
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      registry.invalidate({ editor });
+      await lumine.workspace.paneForItem(view).destroyItem(view);
+      const setSymbols = spyOn(view, "setSymbols").and.callThrough();
+      advanceClock(200);
+      complete(null);
+      await flushMicrotasks();
+      expect(setSymbols).not.toHaveBeenCalled();
     });
 
     it("does not restore keyboard selection into another symbol source", async () => {
@@ -1125,9 +1234,31 @@ describe("outline-view", () => {
       editor.insertText("\n");
       complete(registry.symbols);
       await pending;
+      advanceClock(199);
+      await view.update();
+      expect(names()).toEqual(["alpha", "Beta", "gamma"]);
+      expect(view.symbols).toBe(registry.symbols);
+      expect(view.editorSymbolsList.has(editor)).toBe(false);
+      advanceClock(1);
+      await view.update();
       expect(names()).toEqual([]);
       expect(view.symbols).toBeNull();
-      expect(view.editorSymbolsList.has(editor)).toBe(false);
+    });
+
+    it("accepts fresh symbols when folding changes only the editor display", async () => {
+      let complete;
+      registry.getFileSymbolTree = () => new Promise((resolve) => (complete = resolve));
+      const pending = view.populateForEditor(editor);
+      editor.foldBufferRange([
+        [0, 0],
+        [1, 0],
+      ]);
+      expect(editor.isFoldedAtBufferRow(0)).toBe(true);
+      const symbols = makeSymbolRegistry().symbols;
+      symbols[0].name = "updated";
+      complete(symbols);
+      await pending;
+      expect(names()).toEqual(["updated", "Beta", "gamma"]);
     });
   });
 });
