@@ -149,8 +149,14 @@ describe("outline-view real symbol registry integration", () => {
     expect(view.element.querySelector("li.selected")).toBeNull();
 
     editor.setCursorBufferPosition([4, 0]);
+    await waitForFrames(() => currentName() === "Outer", {
+      description: "the cursor on the class boundary to mark the class current",
+    });
     expect(currentName()).toBe("Outer");
     editor.setCursorBufferPosition([5, 9]);
+    await waitForFrames(() => currentName() === "after", {
+      description: "the cursor on the next function to mark that function current",
+    });
     expect(currentName()).toBe("after");
     expect(view.element.querySelector("li.selected")).toBeNull();
   });
@@ -197,9 +203,12 @@ describe("outline-view real symbol registry integration", () => {
     expect(await registry.getFileSymbolTree(editor)).toEqual([]);
     expect(registry.getDocumentSourceState(editor).status).toBe("ready");
     expect(registry.getDocumentSourceState(editor).source.id).toBe("symbol-tree-sitter");
-    await waitForFrames(() => names().length === 0, {
-      description: "a grammar without tags to clear the previous symbols",
-    });
+    await waitForFrames(
+      () =>
+        names().length === 0 &&
+        view.element.querySelector("background-tips")?.textContent === "No symbols",
+      { description: "a grammar without tags to render its empty ready state" },
+    );
     expect(view.element.querySelector("background-tips").textContent).toBe("No symbols");
   });
 
