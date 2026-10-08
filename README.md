@@ -2,6 +2,8 @@
 
 Show a hierarchical symbol outline of the active editor.
 
+Fork of [savetheclocktower/pulsar-outline-view](https://github.com/savetheclocktower/pulsar-outline-view).
+
 The outline lives in a dock and follows the active editor: it lists the document's symbols as a collapsible tree, tracks the cursor, and jumps to a symbol when its entry is chosen.
 
 ## Features
