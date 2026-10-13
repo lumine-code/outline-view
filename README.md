@@ -16,6 +16,8 @@ The outline lives in a dock and follows the active editor: it lists the document
 - **Filtering**: hides chosen symbol kinds via the ignored-symbol-types setting.
 - **Overflow control**: long names either scroll horizontally or truncate with an ellipsis.
 
+![Browse the structure of a TypeScript file in the outline.](.github/demo.png)
+
 ## Installation
 
 To install `outline-view` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/outline-view`.

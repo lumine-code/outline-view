@@ -1,0 +1,16 @@
+{
+  "title": "outline-view",
+  "description": "Browse the structure of a TypeScript file in the outline.",
+  "recordedOn": "2026-10-13",
+  "sourceRevision": "678786b79854a0ca251c8bfa86060a3eefec76e5",
+  "mode": "normal",
+  "fontSettings": "default",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "Browse the structure of a TypeScript file in the outline.",
+      "width": 1100,
+      "height": 490
+    }
+  ]
+}
