@@ -8,7 +8,9 @@
           "submenu": [
             {
               "label": "Outline View",
-              "command": "outline-view:toggle"
+              "command": "outline-view:toggle",
+              "group": "panels",
+              "order": 10
             }
           ]
         }
