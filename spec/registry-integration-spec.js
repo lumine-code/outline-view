@@ -28,7 +28,19 @@ describe("outline-view real symbol registry integration", () => {
     lumine.config.set("symbol.documentSource", "auto", { scopeSelector: ".source.js" });
     editor = await lumine.workspace.open(path.resolve(__dirname, "..", "package.json"));
     editor.setGrammar(lumine.grammars.grammarForScopeName("source.js"));
+    // Finish the fixture's initial edit before testing source cache reuse.
+    // A late stop-changing event otherwise invalidates that cache mid-test.
+    let stoppedChanging;
+    if (!useMockClock) {
+      stoppedChanging = new Promise((resolve) => {
+        const subscription = editor.getBuffer().onDidStopChanging(() => {
+          subscription.dispose();
+          resolve();
+        });
+      });
+    }
     editor.setText("class Outer {\n  inner() {\n    return 1;\n  }\n}\nfunction after() {}\n");
+    if (stoppedChanging) await stoppedChanging;
     await editor.whenGrammarSettled();
     await registry.getFileSymbolTree(editor);
     view = pack.mainModule.getOutlineView();
