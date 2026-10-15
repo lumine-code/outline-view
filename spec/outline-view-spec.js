@@ -920,7 +920,7 @@ describe("outline-view", () => {
           expect(view.refs.searchEditor.getText()).toBe("");
         });
 
-        it(`adds a cursor and retains panel focus with Ctrl ${route}`, async () => {
+        it(`adds a cursor and retains panel focus with the primary modifier and ${route}`, async () => {
           view.refs.searchEditor.setText("gm");
           await waitForFrames(() => names().length === 1, {
             description: "the symbol to become the only search result",
@@ -928,12 +928,21 @@ describe("outline-view", () => {
           view.setSelectedSymbol(registry.symbols[1].children[0]);
           if (route === "keyboard") {
             view.focusSearch();
-            pressKey("Enter", document.activeElement, { ctrlKey: true });
+            pressKey("Enter", document.activeElement, {
+              ctrlKey: process.platform !== "darwin",
+              metaKey: process.platform === "darwin",
+            });
           } else {
             view.focus();
             entryNamed("gamma")
               .querySelector(".name-inner")
-              .dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+              .dispatchEvent(
+                new MouseEvent("click", {
+                  bubbles: true,
+                  ctrlKey: process.platform !== "darwin",
+                  metaKey: process.platform === "darwin",
+                }),
+              );
           }
 
           expect(editor.getCursorBufferPositions().map((point) => point.toArray())).toEqual([
@@ -944,6 +953,25 @@ describe("outline-view", () => {
           expect(document.activeElement).toBe(view.refs.scroller);
           expect(currentName()).toBe("gamma");
           expect(selectedName()).toBe("gamma");
+        });
+      }
+
+      for (const platform of ["win32", "linux", "darwin"]) {
+        it(`uses the platform's primary click modifier on ${platform}`, () => {
+          const activate = spyOn(view, "activateSymbol");
+          const target = entryNamed("gamma").querySelector(".name-inner");
+          const descriptor = Object.getOwnPropertyDescriptor(process, "platform");
+          Object.defineProperty(process, "platform", { ...descriptor, value: platform });
+          try {
+            target.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+            if (platform === "darwin") expect(activate).not.toHaveBeenCalled();
+            else expect(activate.calls.mostRecent().args[1].addCursor).toBe(true);
+            activate.calls.reset();
+            target.dispatchEvent(new MouseEvent("click", { bubbles: true, metaKey: true }));
+            expect(activate.calls.mostRecent().args[1].addCursor).toBe(platform === "darwin");
+          } finally {
+            Object.defineProperty(process, "platform", descriptor);
+          }
         });
       }
     });
