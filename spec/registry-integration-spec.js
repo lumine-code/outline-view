@@ -173,6 +173,41 @@ describe("outline-view real symbol registry integration", () => {
     expect(view.element.querySelector("li.selected")).toBeNull();
   });
 
+  it("keeps the current symbol in both consumers while typing past its cached range", async () => {
+    const breadcrumbs = await openBreadcrumbs();
+    editor.setCursorBufferPosition([3, 2]);
+    await waitForFrames(() => currentName() === "inner" && breadcrumbs.names().at(-1) === "inner", {
+      description: "both consumers to show the method before its closing brace",
+    });
+    // Keep the provider refresh pending until every immediate assertion has run.
+    spyOn(editor.getBuffer(), "debouncedEmitDidStopChangingEvent");
+    const tree = view.symbols;
+    const rendered = Array.from(breadcrumbs.view.symbolContent.children);
+    for (const character of "    ") {
+      editor.insertText(character);
+      expect(currentName()).toBe("inner");
+      expect(breadcrumbs.names()).toEqual(["Outer", "inner"]);
+      expect(view.symbols).toBe(tree);
+      expect(Array.from(breadcrumbs.view.symbolContent.children)).toEqual(rendered);
+    }
+    expect(registry.peekFileSymbolTree(editor)).toBeNull();
+
+    // Explicit navigation must still resolve against the moved symbol ranges.
+    editor.setCursorBufferPosition([4, 0]);
+    expect(currentName()).toBe("Outer");
+    expect(breadcrumbs.names()).toEqual(["Outer"]);
+    editor.setCursorBufferPosition([3, 6]);
+    expect(currentName()).toBe("inner");
+    expect(breadcrumbs.names()).toEqual(["Outer", "inner"]);
+
+    editor.getBuffer().emitDidStopChangingEvent();
+    await registry.getFileSymbolTree(editor);
+    await waitForFrames(() => view.symbols !== tree && currentName() === "inner", {
+      description: "the fresh parsed tree to replace the tracked coordinates",
+    });
+    expect(breadcrumbs.names()).toEqual(["Outer", "inner"]);
+  });
+
   it("navigates real symbols and retires a withdrawn provider generation", async () => {
     const inner = Array.from(view.element.querySelectorAll(".name-inner")).find(
       (element) => element.textContent === "inner",
