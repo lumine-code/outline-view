@@ -26,7 +26,8 @@
     "lib",
     "menus",
     "spec",
-    "styles"
+    "styles",
+    "THIRD_PARTY_NOTICES"
   ],
   "deserializers": {
     "outline-view/OutlineView": "deserializeOutlineView"
