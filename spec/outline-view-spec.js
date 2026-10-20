@@ -131,6 +131,7 @@ describe("outline-view", () => {
     view.symbols = [symbol];
     const prepare = spyOn(lumine.tools.fuzzyMatcher, "setCandidates").and.callThrough();
     const first = view.filterSymbols("strasse🙂");
+    const matcher = view.searchMatcherCache.matcher;
     expect(first.length).toBe(1);
     expect(first[0].matches).toEqual([0, 1, 2, 3, 4, 4, 5, 6, 7]);
     const pieces = view.highlightMatches(symbol.name, first[0].matches);
@@ -140,7 +141,8 @@ describe("outline-view", () => {
     expect(prepare.calls.count()).toBe(1);
     symbol.name = "renamed";
     expect(view.filterSymbols("str")).toEqual([]);
-    expect(prepare.calls.count()).toBe(2);
+    expect(prepare.calls.count()).toBe(1);
+    expect(view.searchMatcherCache.matcher).toBe(matcher);
   });
 
   describe("workspace serialization", () => {
