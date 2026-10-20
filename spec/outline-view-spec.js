@@ -125,6 +125,24 @@ describe("outline-view", () => {
     expect(view.getAllowedLocations()).toEqual(["right", "left"]);
   });
 
+  it("retains original Unicode offsets and text while reusing prepared search candidates", () => {
+    view = mainModule.getOutlineView();
+    const symbol = { name: "Straße🙂", children: [] };
+    view.symbols = [symbol];
+    const prepare = spyOn(lumine.tools.fuzzyMatcher, "setCandidates").and.callThrough();
+    const first = view.filterSymbols("strasse🙂");
+    expect(first.length).toBe(1);
+    expect(first[0].matches).toEqual([0, 1, 2, 3, 4, 4, 5, 6, 7]);
+    const pieces = view.highlightMatches(symbol.name, first[0].matches);
+    expect(pieces.length).toBe(1);
+    expect(pieces[0].children.map((child) => child.text).join("")).toBe(symbol.name);
+    view.filterSymbols("str");
+    expect(prepare.calls.count()).toBe(1);
+    symbol.name = "renamed";
+    expect(view.filterSymbols("str")).toEqual([]);
+    expect(prepare.calls.count()).toBe(2);
+  });
+
   describe("workspace serialization", () => {
     it("restores one view and wires a symbol registry delivered later", async () => {
       await lumine.packages.deactivatePackage("outline-view");
