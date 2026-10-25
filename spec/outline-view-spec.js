@@ -47,6 +47,11 @@ function makeSymbolRegistry() {
 }
 
 describe("outline-view", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let mainModule, editor, view, providerDisposable, iconRegistration;
   let useMockClock = false;
 

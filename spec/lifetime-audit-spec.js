@@ -1,5 +1,10 @@
 const { Emitter, Point, Range } = require("lumine");
 describe("Outline service and pane lifetime audit", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let main, editor, view, leases, emitters, gates, work;
   function registry() {
     const emitter = new Emitter();

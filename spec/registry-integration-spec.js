@@ -17,6 +17,8 @@ describe("outline-view real symbol registry integration", () => {
   let useMockClock = false;
 
   beforeEach(async () => {
+    const textGrammarPackage = await lumine.packages.activatePackage("language-text");
+    await textGrammarPackage.resourceLoadPromise;
     if (!useMockClock) jasmine.useRealClock();
     otherEditors = [];
     jasmine.attachToDOM(lumine.views.getView(lumine.workspace));

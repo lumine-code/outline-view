@@ -1,4 +1,9 @@
 describe("outline reveal availability", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   it("requires a captured document editor without opening the view", async () => {
     const main = (await lumine.packages.activatePackage("outline-view")).mainModule;
     const available = () =>
