@@ -64,6 +64,8 @@ The outline appearance can be tweaked from your `styles.css`:
 
 Selecting a document symbol source in `symbol` also updates the outline and breadcrumbs. A file choice affects that editor, and a grammar preference applies to editors without a file choice. Auto restores the hub's normal source preference and fallback. During refreshes, the current outline stays visible for up to 200 ms and is replaced directly when new symbols arrive. A longer request clears the old entries until its result is ready.
 
+Search queries are limited to 4096 UTF-16 units. Longer drafts remain intact and show an unavailable state; searching resumes when the complete query fits.
+
 ## Contributing
 
 Got ideas to make this package better, found a bug, or want to help add new features? Just drop your thoughts on GitHub. Any feedback is welcome!
