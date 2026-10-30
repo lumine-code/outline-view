@@ -17,7 +17,8 @@
   display: block;
   position: relative;
   flex: none;
-  margin: 0.375em;
+  padding: 0.375em;
+  border-bottom: 1px solid var(--base-border-color);
 }
 
 .outline-view .outline-search lumine-text-editor {
@@ -27,8 +28,8 @@
 .outline-view .outline-search .icon-remove-close {
   display: none;
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: calc(0.375em + 4px);
+  right: calc(0.375em + 4px);
 }
 
 .outline-view .outline-search:hover .icon-remove-close {
