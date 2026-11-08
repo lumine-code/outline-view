@@ -95,6 +95,8 @@ jobs:
         run: node script/install-spec-packages.js --package ../outline-view --home "$RUNNER_TEMP/lumine-spec-home" --github-env "$GITHUB_ENV"
       - name: Download the Electron binary
         working-directory: lumine
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node script/install-electron.js
       - name: Rebuild native modules for Electron
         working-directory: lumine
