@@ -61,13 +61,6 @@
   overflow: hidden;
 }
 
-.outline-view ul.background-message {
-  position: relative;
-  top: 45%;
-  margin-left: 2px;
-  margin-right: 2px;
-}
-
 .outline-view ul.outline-list-root.outline-list {
   isolation: isolate;
   position: relative;
@@ -126,7 +119,7 @@
   flex: none;
 }
 
-.outline-view .outline-view-option.list-item:hover {
+.outline-view .outline-view-option.list-item:is(:hover, [data-context-menu-hover]) {
   background-image: linear-gradient(var(--outline-shader), var(--outline-shader));
 }
 

@@ -208,6 +208,14 @@ describe("outline-view", () => {
 
       expect(message.querySelector("ul").classList.contains("centered")).toBe(true);
       expect(message.textContent).toBe("Symbol information is unavailable.");
+      expect(message.parentElement.classList.contains("panel-empty-state")).toBeTrue();
+      expect(message.parentElement.classList.contains("outline-scroller")).toBeTrue();
+      expect(
+        message.parentElement.contains(view.element.querySelector(".outline-search")),
+      ).toBeFalse();
+      expect(message.parentElement.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        view.element.querySelector(".outline-search").getBoundingClientRect().bottom,
+      );
     });
 
     it("reports a supported editor with no symbols", async () => {
