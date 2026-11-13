@@ -533,6 +533,39 @@ describe("outline-view", () => {
         view.focus();
       });
 
+      for (const command of [
+        "outline-view:activate-selected-entry",
+        "outline-view:activate-selected-entry-clear-search",
+        "outline-view:activate-selected-entry-add-cursor",
+      ]) {
+        it(`reveals its own scrollbar exactly once for ${command} without list scrolling`, async () => {
+          view.setSelectedSymbol(registry.symbols[0]);
+          const scroller = view.refs.scroller;
+          const position = [scroller.scrollTop, scroller.scrollLeft];
+          const reveal = spyOn(lumine.scrollbars, "reveal");
+
+          await lumine.commands.dispatch(scroller, command);
+
+          expect(reveal).toHaveBeenCalledOnceWith(scroller);
+          expect([scroller.scrollTop, scroller.scrollLeft]).toEqual(position);
+        });
+      }
+
+      it("does not reveal for confirmation without a symbol or for search editing", async () => {
+        registry.symbols = [];
+        registry.invalidate({ editor });
+        await view.populateForEditor(editor);
+        expect(view.getActionEntry()).toBeNull();
+        const reveal = spyOn(lumine.scrollbars, "reveal");
+
+        await lumine.commands.dispatch(view.refs.scroller, "outline-view:activate-selected-entry");
+        await lumine.commands.dispatch(view.refs.scroller, "outline-view:focus-search");
+        view.refs.searchEditor.setText("missing");
+        await view.update();
+
+        expect(reveal).not.toHaveBeenCalled();
+      });
+
       it("wraps through visible symbols while keeping focus in the list", () => {
         const initialPosition = editor.getCursorBufferPosition();
         view.focus();
