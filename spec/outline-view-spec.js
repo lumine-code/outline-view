@@ -533,6 +533,66 @@ describe("outline-view", () => {
         view.focus();
       });
 
+      it("reports a clicked symbol once without re-reading selection after activity", async () => {
+        const target = entryNamed("Beta");
+        const symbol = view.symbolForElement(target);
+        const scroller = view.refs.scroller;
+        const position = [scroller.scrollTop, scroller.scrollLeft];
+        const move = spyOn(view, "moveEditorToSymbol").and.resolveTo();
+        const reveal = spyOn(lumine.scrollbars, "reveal").and.callFake(() => {
+          view.setSelectedSymbol(registry.symbols[0], { scroll: false });
+        });
+        target.querySelector(".name").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await Promise.resolve();
+        expect(reveal).toHaveBeenCalledOnceWith(scroller);
+        expect(move).toHaveBeenCalledTimes(1);
+        const [acceptedSymbol, options, acceptedEditor] = move.calls.mostRecent().args;
+        expect(acceptedSymbol).toBe(symbol);
+        expect(options).toEqual({ addCursor: false, clearSearch: false });
+        expect(acceptedEditor).toBe(editor);
+        expect([scroller.scrollTop, scroller.scrollLeft]).toEqual(position);
+      });
+
+      it("reports each clicked disclosure once while programmatic tree changes stay quiet", () => {
+        const target = entryNamed("Beta");
+        const scroller = view.refs.scroller;
+        const reveal = spyOn(lumine.scrollbars, "reveal");
+        view.setEntryCollapsed(target, true);
+        view.setEntryCollapsed(target, false);
+        expect(reveal).not.toHaveBeenCalled();
+        spyOn(view, "isClickOnCaret").and.returnValue(true);
+        for (const collapsed of [true, false]) {
+          reveal.calls.reset();
+          target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+          expect(target.classList.contains("collapsed")).toBe(collapsed);
+          expect(reveal).toHaveBeenCalledOnceWith(scroller);
+        }
+      });
+
+      it("reveals a selected cursor symbol once when expanding its collapsed ancestor", async () => {
+        const target = entryNamed("Beta");
+        editor.setCursorBufferPosition([4, 2]);
+        view.setEntryCollapsed(target, true);
+        const reveal = spyOn(lumine.scrollbars, "reveal");
+        await view.revealInOutlineView(editor);
+        expect(target.classList.contains("collapsed")).toBeFalse();
+        expect(reveal).toHaveBeenCalledOnceWith(view.refs.scroller);
+      });
+
+      it("ignores foreign rows and native controls without reporting navigation", () => {
+        const reveal = spyOn(lumine.scrollbars, "reveal");
+        const move = spyOn(view, "moveEditorToSymbol");
+        const foreign = document.createElement("li");
+        foreign.className = "outline-view-entry";
+        view.element.appendChild(foreign);
+        foreign.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        view.refs.searchEditor.element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        entryNamed("Beta").dispatchEvent(new MouseEvent("click", { bubbles: true, button: 2 }));
+        expect(reveal).not.toHaveBeenCalled();
+        expect(move).not.toHaveBeenCalled();
+        foreign.remove();
+      });
+
       for (const command of [
         "outline-view:activate-selected-entry",
         "outline-view:activate-selected-entry-clear-search",
