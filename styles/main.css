@@ -30,14 +30,25 @@
   position: absolute;
   top: calc(0.375em + 4px);
   right: calc(0.375em + 4px);
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
 }
 
 .outline-view .outline-search:is(:hover, :focus-within) .icon-remove-close {
-  display: inline-grid;
+  display: block;
 }
 
 .outline-view .outline-search .icon-remove-close:is(:hover, :focus-visible) {
   color: var(--text-color-highlight);
+}
+
+.outline-view .outline-search .icon-remove-close:focus-visible {
+  outline: 1px solid var(--accent-indicator-color);
 }
 
 .outline-view .outline-scroller {
